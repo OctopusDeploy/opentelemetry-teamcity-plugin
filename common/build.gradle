@@ -1,0 +1,11 @@
+jar {
+    archiveBaseName = 'octopus-teamcity-buildevents-common'
+    manifest {
+        attributes(
+                'Specification-Title': archiveBaseName,
+                'Specification-Version': project.version,
+                'Implementation-Title': archiveBaseName,
+                'Implementation-Version': project.version
+        )
+    }
+}

@@ -1,0 +1,91 @@
+import org.apache.tools.ant.filters.ReplaceTokens
+
+plugins {
+    id 'java'
+    id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+    id 'maven-publish'
+    id 'distribution'
+}
+
+group 'com.octopus.teamcity'
+version '0.0.1'
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'io.spring.dependency-management'
+    apply from: "${rootDir}/gradle/versions.gradle"
+
+    // Provided configuration allows compile-time only dependencies to NOT
+    // be included in the final distributions.
+    configurations {
+        provided
+    }
+
+    sourceSets {
+        main { compileClasspath += configurations.provided }
+    }
+
+    task sourcesJar(type: Jar, dependsOn: classes) {
+        classifier = 'sources'
+        from sourceSets.main.allSource
+    }
+
+    version = rootProject.version
+    sourceCompatibility = 8
+    targetCompatibility = 8
+
+    repositories {
+        mavenCentral()
+        maven { url "https://download.jetbrains.com/teamcity-repository" }
+        maven { url "https://packages.jetbrains.team/maven/p/teamcity-rest-client/teamcity-rest-client" }
+        maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
+    }
+
+    dependencies {
+        implementation 'org.apache.logging.log4j:log4j-api'
+        implementation 'org.apache.logging.log4j:log4j-core'
+        implementation 'org.apache.logging.log4j:log4j-slf4j-impl'
+
+        testImplementation 'org.junit.jupiter:junit-jupiter-api'
+
+        testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+    }
+
+    test {
+        useJUnitPlatform()
+    }
+}
+
+apply plugin: "distribution"
+
+
+distZip {
+    archiveName = "Octopus.TeamCity.BuildEvents" + rootProject.version + ".zip"
+}
+
+distributions {
+    main {
+        contents {
+            from file("teamcity-plugin.xml"), {
+                filter(org.apache.tools.ant.filters.ReplaceTokens, tokens:[version: rootProject.version])
+            }
+            into('agent/') {
+                //from tasks.findByPath(":octopus-agent:distZip").outputs.files
+                from tasks.findByPath(":agent:distZip")
+            }
+            into('server/') {
+                from tasks.findByPath(":server:installDist")
+            }
+            into '/'
+        }
+    }
+}
+
+
+task copyZip(type: Copy) {
+    doFirst {
+        assert file("./build/distributions/Octopus.TeamCity.BuildEvents0.0.1.zip").exists()
+    }
+    from 'build/distributions/Octopus.TeamCity.BuildEvents0.0.1.zip'
+    into new File('/Library/TeamCity/data/plugins')
+}

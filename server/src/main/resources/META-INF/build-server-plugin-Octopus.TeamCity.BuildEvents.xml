@@ -5,7 +5,5 @@
         xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd"
         default-autowire="constructor"
 >
-    <bean class="com.octopus.buildeventsplugin.server.ExamplePage"/>
-    <bean class="com.octopus.buildeventsplugin.server.ExampleBuildFeature"/>
     <bean class="com.octopus.buildeventsplugin.server.TeamCityBuildListener"/>
 </beans>

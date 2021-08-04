@@ -18,6 +18,7 @@ dependencies {
     implementation('io.opentelemetry:opentelemetry-api')
     implementation('io.opentelemetry:opentelemetry-sdk')
     implementation('io.opentelemetry:opentelemetry-exporter-otlp')
+    implementation('io.opentelemetry:opentelemetry-semconv:1.4.1-alpha')
     implementation 'io.grpc:grpc-netty-shaded:1.39.0'
     implementation 'io.grpc:grpc-protobuf:1.39.0'
     implementation 'io.grpc:grpc-stub:1.39.0'

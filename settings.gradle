@@ -1,5 +1,4 @@
 rootProject.name = 'buildeventsplugin'
-include ':agent'
 include ':server'
 include ':common'
 

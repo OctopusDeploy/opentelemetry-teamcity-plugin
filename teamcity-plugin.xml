@@ -5,11 +5,11 @@
         <name>Octopus.TeamCity.BuildEvents</name>
         <display-name>Octopus Deploy BuildEvents</display-name>
         <version>@version@</version>
-        <description>Tool to view build trace data</description>
+        <description>Tool to view build trace data using opentelemetry collector endpoints</description>
 
         <vendor>
             <name>Octopus Deploy Pty. Ltd.</name>
-            <url>http://octopusdeploy.com</url>
+            <url>https://octopusdeploy.com</url>
         </vendor>
     </info>
     <deployment use-separate-classloader="true" allow-runtime-reload="true" teamcity.development.shadowCopyClasses="true" />

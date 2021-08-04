@@ -10,6 +10,13 @@ plugins {
 group 'com.octopus.teamcity'
 version '0.0.1'
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(11)
+        vendor = JvmVendorSpec.ADOPTOPENJDK
+    }
+}
+
 subprojects {
     apply plugin: 'java'
     apply plugin: 'io.spring.dependency-management'
@@ -22,7 +29,7 @@ subprojects {
     }
 
     sourceSets {
-        main { compileClasspath += configurations.provided }
+        all { compileClasspath += configurations.provided }
     }
 
     task sourcesJar(type: Jar, dependsOn: classes) {
@@ -31,8 +38,8 @@ subprojects {
     }
 
     version = rootProject.version
-    sourceCompatibility = 8
-    targetCompatibility = 8
+    sourceCompatibility = 11
+    targetCompatibility = 11
 
     repositories {
         mavenCentral()
@@ -68,10 +75,6 @@ distributions {
         contents {
             from file("teamcity-plugin.xml"), {
                 filter(org.apache.tools.ant.filters.ReplaceTokens, tokens:[version: rootProject.version])
-            }
-            into('agent/') {
-                //from tasks.findByPath(":octopus-agent:distZip").outputs.files
-                from tasks.findByPath(":agent:distZip")
             }
             into('server/') {
                 from tasks.findByPath(":server:installDist")

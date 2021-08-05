@@ -1,6 +1,6 @@
-package com.octopus.buildeventsplugin.server;
+package com.octopus.teamcity.opentelemetry.server;
 
-import com.octopus.buildeventsplugin.com.PluginConstants;
+import com.octopus.teamcity.opentelemetry.com.PluginConstants;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.Span;

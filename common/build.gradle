@@ -1,5 +1,5 @@
 jar {
-    archiveBaseName = 'octopus-teamcity-buildevents-common'
+    archiveBaseName = 'octopus-teamcity-opentelemetry-common'
     manifest {
         attributes(
                 'Specification-Title': archiveBaseName,

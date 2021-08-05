@@ -1,4 +1,4 @@
-rootProject.name = 'buildeventsplugin'
+rootProject.name = 'octopusteamcityplugin'
 include ':server'
 include ':common'
 

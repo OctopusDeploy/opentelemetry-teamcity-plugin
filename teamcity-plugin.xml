@@ -2,8 +2,8 @@
 <teamcity-plugin xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                  xsi:noNamespaceSchemaLocation="urn:shemas-jetbrains-com:teamcity-plugin-v1-xml">
     <info>
-        <name>Octopus.TeamCity.BuildEvents</name>
-        <display-name>Octopus Deploy BuildEvents</display-name>
+        <name>Octopus.TeamCity.Opentelemetry</name>
+        <display-name>Octopus Deploy Opentelemetry Plugin</display-name>
         <version>@version@</version>
         <description>Tool to view build trace data using opentelemetry collector endpoints</description>
 

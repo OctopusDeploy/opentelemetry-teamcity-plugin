@@ -1,7 +1,7 @@
 apply plugin: 'distribution'
 
 tasks.named('jar') {
-    archiveBaseName = 'octopus-teamcity-buildevents-server'
+    archiveBaseName = 'octopus-teamcity-opentelemetry-server'
     manifest {
         attributes(
                 'Specification-Title': archiveBaseName,
@@ -15,9 +15,9 @@ tasks.named('jar') {
 dependencies {
     implementation project(':common')
     implementation platform("io.opentelemetry:opentelemetry-bom:1.4.1")
-    implementation('io.opentelemetry:opentelemetry-api')
-    implementation('io.opentelemetry:opentelemetry-sdk')
-    implementation('io.opentelemetry:opentelemetry-exporter-otlp')
+    implementation('io.opentelemetry:opentelemetry-api:1.4.1')
+    implementation('io.opentelemetry:opentelemetry-sdk:1.4.1')
+    implementation('io.opentelemetry:opentelemetry-exporter-otlp:1.4.1')
     implementation('io.opentelemetry:opentelemetry-semconv:1.4.1-alpha')
     implementation 'io.grpc:grpc-netty-shaded:1.39.0'
     implementation 'io.grpc:grpc-protobuf:1.39.0'

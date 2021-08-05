@@ -39,22 +39,21 @@ import java.util.stream.Collectors;
 public class TeamCityBuildListener extends BuildServerAdapter {
 
     private final OpenTelemetry openTelemetry;
-    private static final String API_KEY = TeamCityProperties.getProperty("buildevents.plugin.apikey");
-    private static final String DATASET_NAME = TeamCityProperties.getProperty("buildevents.plugin.dataset");
-    private static final String ENDPOINT = TeamCityProperties.getProperty("buildevents.plugin.endpoint");
+    private static final String ENDPOINT = TeamCityProperties.getProperty(PluginConstants.PROPERTY_KEY_ENDPOINT);
     private HashMap<String, Span> spanMap;
 
     public TeamCityBuildListener(EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher) {
         buildServerListenerEventDispatcher.addListener(this);
+
         Resource serviceNameResource = Resource
                 .create(Attributes.of(ResourceAttributes.SERVICE_NAME, PluginConstants.SERVICE_NAME));
+        Map<String, String> headers = getExporterHeaders();
         OtlpGrpcSpanExporterBuilder spanExporterBuilder = OtlpGrpcSpanExporter.builder();
-        SpanExporter spanExporter = spanExporterBuilder
-                .setEndpoint(ENDPOINT)
-                .addHeader("x-honeycomb-team",API_KEY)
-                .addHeader("x-honeycomb-dataset",DATASET_NAME)
-                .build();
+        spanExporterBuilder.setEndpoint(ENDPOINT);
+        headers.forEach(spanExporterBuilder::addHeader);
+        SpanExporter spanExporter = spanExporterBuilder.build();
         SpanProcessor spanProcessor = BatchSpanProcessor.builder(spanExporter).build();
+
         SdkTracerProvider sdkTracerProvider = SdkTracerProvider.builder()
                 .setResource(Resource.getDefault().merge(serviceNameResource))
                 .addSpanProcessor(spanProcessor)
@@ -63,7 +62,24 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 .setTracerProvider(sdkTracerProvider)
                 .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
                 .buildAndRegisterGlobal();
+
         this.spanMap = new HashMap<>();
+    }
+
+    private Map<String, String> getExporterHeaders() throws IllegalStateException {
+        Properties internalProperties = TeamCityProperties.getAllProperties().first;
+        for (Map.Entry<Object,Object> entry : internalProperties.entrySet()) {
+            String propertyName = entry.getKey().toString();
+            if (propertyName.contains(PluginConstants.PROPERTY_KEY_HEADERS)) {
+                return Arrays.stream(entry.getValue().toString().split(","))
+                        .map(s -> s.split(":"))
+                        .collect(Collectors.toMap(
+                                a -> a[0],
+                                a -> a[1]
+                        ));
+            }
+        }
+        throw new IllegalStateException(PluginConstants.EXCEPTION_ERROR_MESSAGE_HEADERS_UNSET);
     }
 
     @Override

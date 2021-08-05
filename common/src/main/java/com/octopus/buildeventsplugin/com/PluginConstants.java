@@ -1,9 +1,13 @@
 package com.octopus.buildeventsplugin.com;
 
 public class PluginConstants {
+    private PluginConstants() {}
     public static final String TRACER_INSTRUMENTATION_NAME = "octopus.buildevents";
 
     public static final String SERVICE_NAME = "TeamCity";
+
+    public static final String PROPERTY_KEY_ENDPOINT = "buildevents.plugin.endpoint";
+    public static final String PROPERTY_KEY_HEADERS = "buildevents.plugin.headers";
 
     public static final String ATTRIBUTE_SERVICE_NAME = "service_name";
     public static final String ATTRIBUTE_NAME = "name";
@@ -25,5 +29,6 @@ public class PluginConstants {
 
     public static final String EXCEPTION_ERROR_MESSAGE_DURING_BUILD_START = "Error during build start process";
     public static final String EXCEPTION_ERROR_MESSAGE_DURING_BUILD_FINISH = "Error during build finish process";
+    public static final String EXCEPTION_ERROR_MESSAGE_HEADERS_UNSET = "Headers values for: buildevents.plugin.headers not set in internal properties";
 
 }

@@ -67,7 +67,7 @@ apply plugin: "distribution"
 
 
 distZip {
-    archiveName = "Octopus.TeamCity.BuildEvents" + rootProject.version + ".zip"
+    archiveName = "Octopus.TeamCity.BuildEvents." + rootProject.version + ".zip"
 }
 
 distributions {

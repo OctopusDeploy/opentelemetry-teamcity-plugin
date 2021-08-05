@@ -6,7 +6,6 @@ plugins {
 }
 
 group 'com.octopus.teamcity'
-version '0.0.1'
 
 java {
     toolchain {

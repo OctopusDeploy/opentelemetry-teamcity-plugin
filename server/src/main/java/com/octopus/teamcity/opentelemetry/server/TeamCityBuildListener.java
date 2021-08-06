@@ -20,6 +20,7 @@ import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
 import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
 
+import jetbrains.buildServer.log.Loggers;
 import jetbrains.buildServer.serverSide.*;
 import jetbrains.buildServer.serverSide.artifacts.BuildArtifacts;
 import jetbrains.buildServer.serverSide.artifacts.BuildArtifactsViewMode;
@@ -27,39 +28,27 @@ import jetbrains.buildServer.serverSide.buildLog.BlockLogMessage;
 import jetbrains.buildServer.serverSide.buildLog.LogMessage;
 import jetbrains.buildServer.serverSide.buildLog.LogMessageFilter;
 import jetbrains.buildServer.util.EventDispatcher;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class TeamCityBuildListener extends BuildServerAdapter {
 
-    private static final Logger LOG = LogManager.getLogger();
-
     private final OpenTelemetry openTelemetry;
     private static final String ENDPOINT = TeamCityProperties.getProperty(PluginConstants.PROPERTY_KEY_ENDPOINT);
-    private HashMap<String, Span> spanMap;
+    private final HashMap<String, Span> spanMap;
 
     public TeamCityBuildListener(EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher) {
         buildServerListenerEventDispatcher.addListener(this);
 
+        SpanProcessor spanProcessor = buildSpanProcessor();
+
         Resource serviceNameResource = Resource
                 .create(Attributes.of(ResourceAttributes.SERVICE_NAME, PluginConstants.SERVICE_NAME));
-        Map<String, String> headers = getExporterHeaders();
-        OtlpGrpcSpanExporterBuilder spanExporterBuilder = OtlpGrpcSpanExporter.builder();
-        spanExporterBuilder.setEndpoint(ENDPOINT);
-        headers.forEach(spanExporterBuilder::addHeader);
-        SpanExporter spanExporter = spanExporterBuilder.build();
-        SpanProcessor spanProcessor = BatchSpanProcessor.builder(spanExporter).build();
-        LOG.debug("Opentelemetry export headers: {}", headers);
-        LOG.debug("Opentelemetry export endpoint: {}", ENDPOINT);
-
         SdkTracerProvider sdkTracerProvider = SdkTracerProvider.builder()
                 .setResource(Resource.getDefault().merge(serviceNameResource))
                 .addSpanProcessor(spanProcessor)
@@ -68,25 +57,39 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 .setTracerProvider(sdkTracerProvider)
                 .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
                 .buildAndRegisterGlobal();
-        LOG.info("Opentelemetry built and registered globally");
-
+        Loggers.SERVER.info("OpenTelemetry started and registered globally");
+        
         this.spanMap = new HashMap<>();
+    }
+
+    private SpanProcessor buildSpanProcessor() {
+        Map<String, String> headers = getExporterHeaders();
+
+        OtlpGrpcSpanExporterBuilder spanExporterBuilder = OtlpGrpcSpanExporter.builder();
+        headers.forEach(spanExporterBuilder::addHeader);
+        spanExporterBuilder.setEndpoint(ENDPOINT);
+        SpanExporter spanExporter = spanExporterBuilder.build();
+
+        Loggers.SERVER.debug("Opentelemetry export headers: " + headers);
+        Loggers.SERVER.debug("Opentelemetry export endpoint: " + ENDPOINT);
+
+        return BatchSpanProcessor.builder(spanExporter).build();
     }
 
     private Map<String, String> getExporterHeaders() throws IllegalStateException {
         Properties internalProperties = TeamCityProperties.getAllProperties().first;
-        LOG.debug("TeamCity internal properties: {}", internalProperties);
+        Loggers.SERVER.debug("TeamCity internal properties: " + internalProperties);
+
         for (Map.Entry<Object,Object> entry : internalProperties.entrySet()) {
             String propertyName = entry.getKey().toString();
             if (propertyName.contains(PluginConstants.PROPERTY_KEY_HEADERS)) {
-                LOG.debug("Internal Property Name: {}", propertyName);
-                LOG.debug("Internal Property Value: {}", entry.getValue());
-                return Arrays.stream(entry.getValue().toString().split(","))
-                        .map(s -> s.split(":"))
-                        .collect(Collectors.toMap(
-                                a -> a[0],
-                                a -> a[1]
-                        ));
+                Object propertyValue = entry.getValue();
+                Loggers.SERVER.debug("Internal Property Name: " + propertyName);
+                Loggers.SERVER.debug("Internal Property Value: " + propertyValue);
+
+                return Arrays.stream(propertyValue.toString().split(","))
+                        .map(propertyValuesSplit -> propertyValuesSplit.split(":"))
+                        .collect(Collectors.toMap(key -> key[0], value -> value[1]));
             }
         }
         throw new IllegalStateException(PluginConstants.EXCEPTION_ERROR_MESSAGE_HEADERS_UNSET);
@@ -96,57 +99,78 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     public void buildStarted(@NotNull SRunningBuild build) {
         super.buildStarted(build);
         String buildTypeId = build.getBuildTypeId();
-        String buildName="";
-        if (build.getBuildType() != null) buildName = build.getBuildType().getName();
-        LOG.debug("Build started method triggered for {}", buildTypeId);
+        String buildName = getBuildName(build);
+        Loggers.SERVER.debug("Build started method triggered for " + buildTypeId);
 
-        Tracer tracer = this.openTelemetry.getTracer(PluginConstants.TRACER_INSTRUMENTATION_NAME);
-        Span parentSpan = getParentSpan(build, tracer);
-        Span span = this.spanMap.containsKey(buildTypeId) ?
-                this.spanMap.get(buildTypeId) :
-                tracer.spanBuilder(buildTypeId).setParent(Context.current().with(parentSpan)).startSpan();
+        Span parentSpan = getParentSpan(build);
+        Span span = createSpan(buildTypeId, parentSpan);
         this.spanMap.put(buildTypeId, span);
-        LOG.info("Tracer initialized and span created for {}", buildName);
+        Loggers.SERVER.info("Tracer initialized and span created for " + buildName);
 
-        try (Scope scope = parentSpan.makeCurrent()) {
-            if (build.getBuildType() != null) {
-                span.setAttribute(PluginConstants.ATTRIBUTE_PROJECT_NAME, build.getBuildType().getProject().getName());
-            }
-            if (build.getProjectExternalId() != null) {
-                span.setAttribute(PluginConstants.ATTRIBUTE_PROJECT_ID, build.getProjectExternalId());
-            }
-            span.setAttribute(PluginConstants.ATTRIBUTE_AGENT_NAME, build.getAgentName());
-            span.setAttribute(PluginConstants.ATTRIBUTE_AGENT_TYPE, build.getAgent().getAgentTypeId());
-            span.setAttribute(PluginConstants.ATTRIBUTE_BUILD_NUMBER, build.getBuildNumber());
-            if (!build.getRevisions().isEmpty()) {
-                span.setAttribute(PluginConstants.ATTRIBUTE_COMMIT, build.getRevisions().get(0).getRevisionDisplayName());
-            }
-            span.setAttribute(PluginConstants.ATTRIBUTE_SERVICE_NAME, build.getBuildTypeExternalId());
-            span.setAttribute(PluginConstants.ATTRIBUTE_NAME, buildName);
-            if (build.getBranch() != null) {
-                span.setAttribute(PluginConstants.ATTRIBUTE_BRANCH, build.getBranch().getName());
-            }
+        try (Scope ignored = parentSpan.makeCurrent()) {
+            setParentSpanAttributes(build, buildName, span);
             span.addEvent(PluginConstants.EVENT_STARTED);
-            LOG.info("{} event added to span for build {}", PluginConstants.EVENT_STARTED, buildName);
+            Loggers.SERVER.info(PluginConstants.EVENT_STARTED + " event added to span for build " + buildName);
             this.spanMap.put(buildTypeId, span);
         } catch (Exception e) {
-            LOG.error("Exception in Build Start: {}", e.getCause().toString());
-            LOG.error("Exception message: {}", e.getMessage());
-            LOG.error("Exception stacktrace: {}", Arrays.toString(e.getStackTrace()));
+            Loggers.SERVER.error("Exception in Build Start caused by: " + e.getCause() +
+                    ", with message: " + e.getMessage() +
+                    ", and stacktrace: " + Arrays.toString(e.getStackTrace()));
             if (span != null) {
                 span.setStatus(StatusCode.ERROR, PluginConstants.EXCEPTION_ERROR_MESSAGE_DURING_BUILD_START + ": " + e.getMessage());
             }
         }
     }
 
-    private Span getParentSpan(SBuild build, Tracer tracer) {
+    private String getBuildName(SRunningBuild build) {
+        return build.getBuildType() != null ? build.getBuildType().getName() : null;
+    }
+
+    private Span getParentSpan(SRunningBuild build) {
+        Tracer tracer = getTracer();
         BuildPromotion[] topParentBuild = build.getBuildPromotion().findTops();
         BuildPromotion buildPromotion = topParentBuild[0];
-        LOG.debug("Top Build Parent: {}", buildPromotion);
+        Loggers.SERVER.debug("Top Build Parent: " + buildPromotion);
         if (!this.spanMap.containsKey(buildPromotion.getBuildTypeId())) {
             this.spanMap.put(buildPromotion.getBuildTypeId(), tracer.spanBuilder(buildPromotion.getBuildTypeId()).startSpan());
         }
         return this.spanMap.get(buildPromotion.getBuildTypeId());
+    }
+
+    private Span createSpan(String buildTypeId, Span parentSpan) {
+        Tracer tracer = getTracer();
+        return this.spanMap.containsKey(buildTypeId) ?
+                this.spanMap.get(buildTypeId) :
+                tracer.spanBuilder(buildTypeId).setParent(Context.current().with(parentSpan)).startSpan();
+    }
+
+    private Tracer getTracer() {
+        return this.openTelemetry.getTracer(PluginConstants.TRACER_INSTRUMENTATION_NAME);
+    }
+
+    private void setParentSpanAttributes(SRunningBuild build, String buildName, Span span) {
+        if (build.getBuildType() != null) {
+            addAttributeToSpan(span, PluginConstants.ATTRIBUTE_PROJECT_NAME, build.getBuildType().getProject().getName());
+        }
+        if (build.getBranch() != null ) {
+            addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BRANCH,  build.getBranch().getName());
+        }
+        if (!build.getRevisions().isEmpty()) {
+            addAttributeToSpan(span, PluginConstants.ATTRIBUTE_COMMIT,  build.getRevisions().iterator().next().getRevisionDisplayName());
+        }
+        if (build.getProjectExternalId() != null ) {
+            addAttributeToSpan(span, PluginConstants.ATTRIBUTE_PROJECT_ID, build.getProjectExternalId());
+        }
+        addAttributeToSpan(span, PluginConstants.ATTRIBUTE_AGENT_NAME, build.getAgentName());
+        addAttributeToSpan(span, PluginConstants.ATTRIBUTE_AGENT_TYPE, build.getAgent().getAgentTypeId());
+        addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_NUMBER, build.getBuildNumber());
+        addAttributeToSpan(span, PluginConstants.ATTRIBUTE_SERVICE_NAME,  build.getBuildTypeExternalId());
+        addAttributeToSpan(span, PluginConstants.ATTRIBUTE_NAME, buildName);
+    }
+
+    private void addAttributeToSpan(Span span, String attributeName, Object attributeValue) {
+        Loggers.SERVER.debug("Adding attribute to span " + attributeName + "=" + attributeValue);
+        span.setAttribute(attributeName, attributeValue.toString());
     }
 
     @Override
@@ -161,66 +185,54 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         buildFinishedOrInterrupted(build);
     }
 
-    private void buildFinishedOrInterrupted (SBuild build) {
+    private void buildFinishedOrInterrupted (SRunningBuild build) {
         String buildTypeId = build.getBuildTypeId();
-        String buildName="";
-        if (build.getBuildType() != null) buildName = build.getBuildType().getName();
-        LOG.debug("Build finished method triggered for {}", buildTypeId);
+        String buildName = getBuildName(build);
+        Loggers.SERVER.debug("Build finished method triggered for " + buildTypeId);
 
         BuildStatistics buildStatistics = build.getBuildStatistics(
                 BuildStatisticsOptions.ALL_TESTS_NO_DETAILS);
-        Tracer tracer = this.openTelemetry.getTracer(PluginConstants.TRACER_INSTRUMENTATION_NAME);
-        LOG.info("Tracer initialized and span created for {}", buildName);
+        Tracer tracer = getTracer();
 
         if(this.spanMap.containsKey(buildTypeId)) {
             Span span = this.spanMap.get(buildTypeId);
-            try (Scope scope = span.makeCurrent()){
+            Loggers.SERVER.info("Tracer initialized and span found for " + buildName);
+            try (Scope ignored = span.makeCurrent()){
                 createQueuedEventsSpans(build, buildName, tracer, span);
                 createBuildStepSpans(build, buildName, tracer, span);
                 getArtifactAttributes(build, buildName, span);
 
-                span.setAttribute(PluginConstants.ATTRIBUTE_SUCCESS_STATUS, build.getBuildStatus().isSuccessful());
-                span.setAttribute(PluginConstants.ATTRIBUTE_FAILED_TEST_COUNT, buildStatistics.getFailedTestCount());
-                span.setAttribute(PluginConstants.ATTRIBUTE_BUILD_PROBLEMS_COUNT, buildStatistics.getCompilationErrorsCount());
+                addAttributeToSpan(span, PluginConstants.ATTRIBUTE_SUCCESS_STATUS, build.getBuildStatus().isSuccessful());
+                addAttributeToSpan(span, PluginConstants.ATTRIBUTE_FAILED_TEST_COUNT, buildStatistics.getFailedTestCount());
+                addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_PROBLEMS_COUNT, buildStatistics.getCompilationErrorsCount());
 
                 span.addEvent(PluginConstants.EVENT_FINISHED);
-                LOG.info("{} event added to span for build {}", PluginConstants.EVENT_FINISHED, buildName);
+                Loggers.SERVER.info(PluginConstants.EVENT_FINISHED + " event added to span for build " + buildName);
             } catch (Exception e) {
-                LOG.error("Exception in Build Finish: {}", e.getCause().toString());
-                LOG.error("Exception message: {}", e.getMessage());
-                LOG.error("Exception stacktrace: {}", Arrays.toString(e.getStackTrace()));
+                Loggers.SERVER.error("Exception in Build Finish caused by: " + e.getCause() +
+                        ", with message: " + e.getMessage() +
+                        ", and stacktrace: " + Arrays.toString(e.getStackTrace()));
                 span.setStatus(StatusCode.ERROR, PluginConstants.EXCEPTION_ERROR_MESSAGE_DURING_BUILD_FINISH + ": " + e.getMessage());
             } finally {
                 span.end();
                 this.spanMap.remove(buildTypeId);
             }
+        } else {
+            Loggers.SERVER.error("Build end triggered for {} and span not found in plugin spanMap", buildTypeId);
         }
     }
 
-    private void getArtifactAttributes(SBuild build, String buildName, Span span) {
-        LOG.info("Retrieving build {} artifact attributes", buildName);
-        BuildArtifacts buildArtifacts = build.getArtifacts(BuildArtifactsViewMode.VIEW_ALL);
-        AtomicInteger index = new AtomicInteger(0);
-        buildArtifacts.iterateArtifacts(artifact -> {
-            index.getAndIncrement();
-            span.setAttribute(PluginConstants.ATTRIBUTE_ARTIFACT_NAME + "_" + index, artifact.getName());
-            span.setAttribute(PluginConstants.ATTRIBUTE_ARTIFACT_SIZE + "_" + index, artifact.getSize());
-            LOG.debug("Build artifact attribute {}: {}, {}", index, artifact.getName(), artifact.getSize());
-            return BuildArtifacts.BuildArtifactsProcessor.Continuation.CONTINUE;
-        });
-    }
-
-    private void createQueuedEventsSpans(SBuild build, String buildName, Tracer tracer, Span span) {
+    private void createQueuedEventsSpans(SRunningBuild build, String buildName, Tracer tracer, Span span) {
         long startDateTime = build.getQueuedDate().getTime();
         Map<String, BigDecimal> reportedStatics = build.getStatisticValues();
-        LOG.info("Retrieving build {} queued event spans", buildName);
+        Loggers.SERVER.info("Retrieving queued event spans for build " + buildName);
 
         for (Map.Entry<String,BigDecimal> entry : reportedStatics.entrySet()) {
             String key = entry.getKey();
-            LOG.debug("Queue item: {}", key);
+            Loggers.SERVER.debug("Queue item: " + key);
             if (key.contains("queueWaitReason:")) {
                 BigDecimal value = entry.getValue();
-                LOG.debug("Queue value: {}", value);
+                Loggers.SERVER.debug("Queue value: " + value);
                 Span childSpan = createChildSpan(tracer, span, key, startDateTime);
                 List<String> keySplitList = Pattern.compile(":")
                         .splitAsStream(key)
@@ -228,25 +240,20 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 childSpan.setAttribute(PluginConstants.ATTRIBUTE_NAME, keySplitList.get(1));
                 childSpan.setAttribute(PluginConstants.ATTRIBUTE_SERVICE_NAME, keySplitList.get(0));
                 childSpan.end(startDateTime + value.longValue(), TimeUnit.MILLISECONDS);
-                LOG.info("Queued span added");
+                Loggers.SERVER.info("Queued span added");
                 startDateTime+= value.longValue();
             }
         }
     }
 
-    private void createBuildStepSpans(SBuild build, String buildName, Tracer tracer, Span span) {
-        LOG.info("Retrieving build {} step event spans", buildName);
-        List<LogMessage> buildStepLogs = build.getBuildLog().getFilteredMessages(new LogMessageFilter() {
-            @Override
-            public boolean acceptMessage(LogMessage message, boolean lastMessageInParent) {
-                return message instanceof BlockLogMessage;
-            }
-        });
+    private void createBuildStepSpans(SRunningBuild build, String buildName, Tracer tracer, Span span) {
+        Loggers.SERVER.info("Retrieving build step event spans for build " + buildName);
+        List<LogMessage> buildStepLogs = getBuildStepLogs(build);
         for (LogMessage logmessage: buildStepLogs) {
             BlockLogMessage blockLogMessage = (BlockLogMessage) logmessage;
             Date finishedDate = blockLogMessage.getFinishDate();
             String buildStepName = blockLogMessage.getText();
-            LOG.debug("Build Step {} with finish time {}", buildStepName, finishedDate);
+            Loggers.SERVER.debug("Build Step " + buildStepName + " with finish time " + finishedDate);
             if (finishedDate != null) {
                 Span childSpan = createChildSpan(tracer, span, blockLogMessage.getText(), blockLogMessage.getTimestamp().getTime());
                 if (blockLogMessage.getBlockDescription() != null) {
@@ -256,16 +263,35 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 }
                 childSpan.setAttribute(PluginConstants.ATTRIBUTE_SERVICE_NAME, blockLogMessage.getBlockType());
                 childSpan.end(finishedDate.getTime(),TimeUnit.MILLISECONDS);
-                LOG.info("Build step span added");
+                Loggers.SERVER.info("Build step span added");
             }
         }
     }
 
     private Span createChildSpan(Tracer tracer, Span parentSpan, String spanName, long startTime) {
-        LOG.info("Creating child span {} under parent {}", spanName, parentSpan);
+        Loggers.SERVER.info("Creating child span " + spanName + " under parent " + parentSpan);
         return tracer.spanBuilder(spanName)
                 .setParent(Context.current().with(parentSpan))
                 .setStartTimestamp(startTime,TimeUnit.MILLISECONDS)
                 .startSpan();
+    }
+
+    private List<LogMessage> getBuildStepLogs(SRunningBuild build) {
+        return build.getBuildLog().getFilteredMessages(new LogMessageFilter() {
+            @Override
+            public boolean acceptMessage(LogMessage message, boolean lastMessageInParent) {
+                return message instanceof BlockLogMessage;
+            }
+        });
+    }
+
+    private void getArtifactAttributes(SRunningBuild build, String buildName, Span span) {
+        Loggers.SERVER.info("Retrieving build artifact attributes for build " + buildName);
+        BuildArtifacts buildArtifacts = build.getArtifacts(BuildArtifactsViewMode.VIEW_ALL);
+        buildArtifacts.iterateArtifacts(artifact -> {
+            span.setAttribute(artifact.getName() + PluginConstants.ATTRIBUTE_ARTIFACT_SIZE, artifact.getSize());
+            Loggers.SERVER.debug("Build artifact attribute " + artifact.getName() + "=" + artifact.getSize());
+            return BuildArtifacts.BuildArtifactsProcessor.Continuation.CONTINUE;
+        });
     }
 }

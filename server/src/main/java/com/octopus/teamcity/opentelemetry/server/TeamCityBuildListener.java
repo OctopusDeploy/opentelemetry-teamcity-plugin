@@ -58,8 +58,8 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 .setTracerProvider(sdkTracerProvider)
                 .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
                 .buildAndRegisterGlobal();
-        Loggers.SERVER.info("OpenTelemetry started and registered globally");
-        
+        Loggers.SERVER.info("OpenTelemetry plugin started and BuildListener registered");
+
         this.spanMap = new HashMap<>();
     }
 

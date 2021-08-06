@@ -1,4 +1,4 @@
-package com.octopus.teamcity.opentelemetry.com;
+package com.octopus.teamcity.opentelemetry.common;
 
 public class PluginConstants {
     private PluginConstants() {}

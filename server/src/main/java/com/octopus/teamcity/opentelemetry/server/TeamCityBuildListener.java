@@ -1,6 +1,6 @@
 package com.octopus.teamcity.opentelemetry.server;
 
-import com.octopus.teamcity.opentelemetry.com.PluginConstants;
+import com.octopus.teamcity.opentelemetry.common.PluginConstants;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.Span;
@@ -27,6 +27,8 @@ import jetbrains.buildServer.serverSide.buildLog.BlockLogMessage;
 import jetbrains.buildServer.serverSide.buildLog.LogMessage;
 import jetbrains.buildServer.serverSide.buildLog.LogMessageFilter;
 import jetbrains.buildServer.util.EventDispatcher;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
 import java.math.BigDecimal;
@@ -37,6 +39,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class TeamCityBuildListener extends BuildServerAdapter {
+
+    private static final Logger LOG = LogManager.getLogger();
 
     private final OpenTelemetry openTelemetry;
     private static final String ENDPOINT = TeamCityProperties.getProperty(PluginConstants.PROPERTY_KEY_ENDPOINT);
@@ -53,6 +57,8 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         headers.forEach(spanExporterBuilder::addHeader);
         SpanExporter spanExporter = spanExporterBuilder.build();
         SpanProcessor spanProcessor = BatchSpanProcessor.builder(spanExporter).build();
+        LOG.debug("Opentelemetry export headers: {}", headers);
+        LOG.debug("Opentelemetry export endpoint: {}", ENDPOINT);
 
         SdkTracerProvider sdkTracerProvider = SdkTracerProvider.builder()
                 .setResource(Resource.getDefault().merge(serviceNameResource))
@@ -62,15 +68,19 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 .setTracerProvider(sdkTracerProvider)
                 .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
                 .buildAndRegisterGlobal();
+        LOG.info("Opentelemetry built and registered globally");
 
         this.spanMap = new HashMap<>();
     }
 
     private Map<String, String> getExporterHeaders() throws IllegalStateException {
         Properties internalProperties = TeamCityProperties.getAllProperties().first;
+        LOG.debug("TeamCity internal properties: {}", internalProperties);
         for (Map.Entry<Object,Object> entry : internalProperties.entrySet()) {
             String propertyName = entry.getKey().toString();
             if (propertyName.contains(PluginConstants.PROPERTY_KEY_HEADERS)) {
+                LOG.debug("Internal Property Name: {}", propertyName);
+                LOG.debug("Internal Property Value: {}", entry.getValue());
                 return Arrays.stream(entry.getValue().toString().split(","))
                         .map(s -> s.split(":"))
                         .collect(Collectors.toMap(
@@ -86,6 +96,9 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     public void buildStarted(@NotNull SRunningBuild build) {
         super.buildStarted(build);
         String buildTypeId = build.getBuildTypeId();
+        String buildName="";
+        if (build.getBuildType() != null) buildName = build.getBuildType().getName();
+        LOG.debug("Build started method triggered for {}", buildTypeId);
 
         Tracer tracer = this.openTelemetry.getTracer(PluginConstants.TRACER_INSTRUMENTATION_NAME);
         Span parentSpan = getParentSpan(build, tracer);
@@ -93,6 +106,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 this.spanMap.get(buildTypeId) :
                 tracer.spanBuilder(buildTypeId).setParent(Context.current().with(parentSpan)).startSpan();
         this.spanMap.put(buildTypeId, span);
+        LOG.info("Tracer initialized and span created for {}", buildName);
 
         try (Scope scope = parentSpan.makeCurrent()) {
             if (build.getBuildType() != null) {
@@ -108,13 +122,17 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 span.setAttribute(PluginConstants.ATTRIBUTE_COMMIT, build.getRevisions().get(0).getRevisionDisplayName());
             }
             span.setAttribute(PluginConstants.ATTRIBUTE_SERVICE_NAME, build.getBuildTypeExternalId());
-            span.setAttribute(PluginConstants.ATTRIBUTE_NAME, build.getBuildType().getName());
+            span.setAttribute(PluginConstants.ATTRIBUTE_NAME, buildName);
             if (build.getBranch() != null) {
                 span.setAttribute(PluginConstants.ATTRIBUTE_BRANCH, build.getBranch().getName());
             }
             span.addEvent(PluginConstants.EVENT_STARTED);
+            LOG.info("{} event added to span for build {}", PluginConstants.EVENT_STARTED, buildName);
             this.spanMap.put(buildTypeId, span);
         } catch (Exception e) {
+            LOG.error("Exception in Build Start: {}", e.getCause().toString());
+            LOG.error("Exception message: {}", e.getMessage());
+            LOG.error("Exception stacktrace: {}", Arrays.toString(e.getStackTrace()));
             if (span != null) {
                 span.setStatus(StatusCode.ERROR, PluginConstants.EXCEPTION_ERROR_MESSAGE_DURING_BUILD_START + ": " + e.getMessage());
             }
@@ -124,6 +142,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     private Span getParentSpan(SBuild build, Tracer tracer) {
         BuildPromotion[] topParentBuild = build.getBuildPromotion().findTops();
         BuildPromotion buildPromotion = topParentBuild[0];
+        LOG.debug("Top Build Parent: {}", buildPromotion);
         if (!this.spanMap.containsKey(buildPromotion.getBuildTypeId())) {
             this.spanMap.put(buildPromotion.getBuildTypeId(), tracer.spanBuilder(buildPromotion.getBuildTypeId()).startSpan());
         }
@@ -144,23 +163,32 @@ public class TeamCityBuildListener extends BuildServerAdapter {
 
     private void buildFinishedOrInterrupted (SBuild build) {
         String buildTypeId = build.getBuildTypeId();
+        String buildName="";
+        if (build.getBuildType() != null) buildName = build.getBuildType().getName();
+        LOG.debug("Build finished method triggered for {}", buildTypeId);
+
         BuildStatistics buildStatistics = build.getBuildStatistics(
                 BuildStatisticsOptions.ALL_TESTS_NO_DETAILS);
         Tracer tracer = this.openTelemetry.getTracer(PluginConstants.TRACER_INSTRUMENTATION_NAME);
+        LOG.info("Tracer initialized and span created for {}", buildName);
 
         if(this.spanMap.containsKey(buildTypeId)) {
             Span span = this.spanMap.get(buildTypeId);
             try (Scope scope = span.makeCurrent()){
-                createQueuedEventsSpans(build, tracer, span);
-                createBuildStepSpans(build, tracer, span);
-                getArtifactAttributes(build,span);
+                createQueuedEventsSpans(build, buildName, tracer, span);
+                createBuildStepSpans(build, buildName, tracer, span);
+                getArtifactAttributes(build, buildName, span);
 
                 span.setAttribute(PluginConstants.ATTRIBUTE_SUCCESS_STATUS, build.getBuildStatus().isSuccessful());
                 span.setAttribute(PluginConstants.ATTRIBUTE_FAILED_TEST_COUNT, buildStatistics.getFailedTestCount());
                 span.setAttribute(PluginConstants.ATTRIBUTE_BUILD_PROBLEMS_COUNT, buildStatistics.getCompilationErrorsCount());
 
                 span.addEvent(PluginConstants.EVENT_FINISHED);
+                LOG.info("{} event added to span for build {}", PluginConstants.EVENT_FINISHED, buildName);
             } catch (Exception e) {
+                LOG.error("Exception in Build Finish: {}", e.getCause().toString());
+                LOG.error("Exception message: {}", e.getMessage());
+                LOG.error("Exception stacktrace: {}", Arrays.toString(e.getStackTrace()));
                 span.setStatus(StatusCode.ERROR, PluginConstants.EXCEPTION_ERROR_MESSAGE_DURING_BUILD_FINISH + ": " + e.getMessage());
             } finally {
                 span.end();
@@ -169,25 +197,30 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         }
     }
 
-    private void getArtifactAttributes(SBuild build, Span span) {
+    private void getArtifactAttributes(SBuild build, String buildName, Span span) {
+        LOG.info("Retrieving build {} artifact attributes", buildName);
         BuildArtifacts buildArtifacts = build.getArtifacts(BuildArtifactsViewMode.VIEW_ALL);
         AtomicInteger index = new AtomicInteger(0);
         buildArtifacts.iterateArtifacts(artifact -> {
             index.getAndIncrement();
             span.setAttribute(PluginConstants.ATTRIBUTE_ARTIFACT_NAME + "_" + index, artifact.getName());
             span.setAttribute(PluginConstants.ATTRIBUTE_ARTIFACT_SIZE + "_" + index, artifact.getSize());
+            LOG.debug("Build artifact attribute {}: {}, {}", index, artifact.getName(), artifact.getSize());
             return BuildArtifacts.BuildArtifactsProcessor.Continuation.CONTINUE;
         });
     }
 
-    private void createQueuedEventsSpans(SBuild build, Tracer tracer, Span span) {
+    private void createQueuedEventsSpans(SBuild build, String buildName, Tracer tracer, Span span) {
         long startDateTime = build.getQueuedDate().getTime();
         Map<String, BigDecimal> reportedStatics = build.getStatisticValues();
+        LOG.info("Retrieving build {} queued event spans", buildName);
 
         for (Map.Entry<String,BigDecimal> entry : reportedStatics.entrySet()) {
             String key = entry.getKey();
+            LOG.debug("Queue item: {}", key);
             if (key.contains("queueWaitReason:")) {
                 BigDecimal value = entry.getValue();
+                LOG.debug("Queue value: {}", value);
                 Span childSpan = createChildSpan(tracer, span, key, startDateTime);
                 List<String> keySplitList = Pattern.compile(":")
                         .splitAsStream(key)
@@ -195,12 +228,14 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 childSpan.setAttribute(PluginConstants.ATTRIBUTE_NAME, keySplitList.get(1));
                 childSpan.setAttribute(PluginConstants.ATTRIBUTE_SERVICE_NAME, keySplitList.get(0));
                 childSpan.end(startDateTime + value.longValue(), TimeUnit.MILLISECONDS);
+                LOG.info("Queued span added");
                 startDateTime+= value.longValue();
             }
         }
     }
 
-    private void createBuildStepSpans(SBuild build, Tracer tracer, Span span) {
+    private void createBuildStepSpans(SBuild build, String buildName, Tracer tracer, Span span) {
+        LOG.info("Retrieving build {} step event spans", buildName);
         List<LogMessage> buildStepLogs = build.getBuildLog().getFilteredMessages(new LogMessageFilter() {
             @Override
             public boolean acceptMessage(LogMessage message, boolean lastMessageInParent) {
@@ -211,6 +246,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
             BlockLogMessage blockLogMessage = (BlockLogMessage) logmessage;
             Date finishedDate = blockLogMessage.getFinishDate();
             String buildStepName = blockLogMessage.getText();
+            LOG.debug("Build Step {} with finish time {}", buildStepName, finishedDate);
             if (finishedDate != null) {
                 Span childSpan = createChildSpan(tracer, span, blockLogMessage.getText(), blockLogMessage.getTimestamp().getTime());
                 if (blockLogMessage.getBlockDescription() != null) {
@@ -220,11 +256,13 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 }
                 childSpan.setAttribute(PluginConstants.ATTRIBUTE_SERVICE_NAME, blockLogMessage.getBlockType());
                 childSpan.end(finishedDate.getTime(),TimeUnit.MILLISECONDS);
+                LOG.info("Build step span added");
             }
         }
     }
 
     private Span createChildSpan(Tracer tracer, Span parentSpan, String spanName, long startTime) {
+        LOG.info("Creating child span {} under parent {}", spanName, parentSpan);
         return tracer.spanBuilder(spanName)
                 .setParent(Context.current().with(parentSpan))
                 .setStartTimestamp(startTime,TimeUnit.MILLISECONDS)

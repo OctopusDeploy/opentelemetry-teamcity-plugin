@@ -33,6 +33,7 @@ import org.jetbrains.annotations.NotNull;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -70,10 +71,25 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         spanExporterBuilder.setEndpoint(ENDPOINT);
         SpanExporter spanExporter = spanExporterBuilder.build();
 
-        Loggers.SERVER.debug("Opentelemetry export headers: " + headers);
+        Loggers.SERVER.debug("Opentelemetry export headers: " + mask(headers.toString()));
         Loggers.SERVER.debug("Opentelemetry export endpoint: " + ENDPOINT);
 
         return BatchSpanProcessor.builder(spanExporter).build();
+    }
+
+    private String mask(String message) {
+        final String API_KEY_REGEX = "([a-z0-9]{31})";
+        final Pattern apikeyPattern = Pattern.compile(API_KEY_REGEX);
+        final String API_KEY_REPLACEMENT_REGEX = "XXXXXXXXXXXXXXXX";
+
+        StringBuilder buffer = new StringBuilder();
+
+        Matcher matcher = apikeyPattern.matcher(message);
+        while (matcher.find()) {
+            matcher.appendReplacement(buffer, API_KEY_REPLACEMENT_REGEX);
+        }
+        matcher.appendTail(buffer);
+        return buffer.toString();
     }
 
     private Map<String, String> getExporterHeaders() throws IllegalStateException {

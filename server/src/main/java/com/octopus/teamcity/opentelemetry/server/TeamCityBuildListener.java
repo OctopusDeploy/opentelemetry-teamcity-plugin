@@ -130,7 +130,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 Loggers.SERVER.info(PluginConstants.EVENT_STARTED + " event added to span for build " + buildName);
                 this.spanMap.put(buildTypeId, span);
             } catch (Exception e) {
-                Loggers.SERVER.error("Exception in Build Start caused by: " + e.getCause() +
+                Loggers.SERVER.error("Exception in Build Start caused by: " + e + e.getCause() +
                         ", with message: " + e.getMessage() +
                         ", and stacktrace: " + Arrays.toString(e.getStackTrace()));
                 if (span != null) {
@@ -237,7 +237,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 span.addEvent(PluginConstants.EVENT_FINISHED);
                 Loggers.SERVER.info(PluginConstants.EVENT_FINISHED + " event added to span for build " + buildName);
             } catch (Exception e) {
-                Loggers.SERVER.error("Exception in Build Finish caused by: " + e.getCause() +
+                Loggers.SERVER.error("Exception in Build Finish caused by: "+ e + e.getCause() +
                         ", with message: " + e.getMessage() +
                         ", and stacktrace: " + Arrays.toString(e.getStackTrace()));
                 span.setStatus(StatusCode.ERROR, PluginConstants.EXCEPTION_ERROR_MESSAGE_DURING_BUILD_FINISH + ": " + e.getMessage());

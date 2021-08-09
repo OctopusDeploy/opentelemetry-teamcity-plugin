@@ -137,6 +137,8 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                     span.setStatus(StatusCode.ERROR, PluginConstants.EXCEPTION_ERROR_MESSAGE_DURING_BUILD_START + ": " + e.getMessage());
                 }
             }
+        } else {
+            Loggers.SERVER.warn("Build start triggered for " +  getBuildName(build) + " and plugin not ready. This build will not be traced");
         }
     }
 

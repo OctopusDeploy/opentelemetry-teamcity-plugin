@@ -58,7 +58,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 .setTracerProvider(sdkTracerProvider)
                 .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
                 .buildAndRegisterGlobal();
-        Loggers.SERVER.info("OpenTelemetry plugin started and BuildListener registered");
+        Loggers.SERVER.info("OpenTelemetry plugin started and BuildListener registered.");
 
         this.spanMap = new HashMap<>();
     }
@@ -130,7 +130,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 Loggers.SERVER.info(PluginConstants.EVENT_STARTED + " event added to span for build " + buildName);
                 this.spanMap.put(buildTypeId, span);
             } catch (Exception e) {
-                Loggers.SERVER.error("Exception in Build Start caused by: " + e.getCause() +
+                Loggers.SERVER.error("Exception in Build Start caused by: " + e + e.getCause() +
                         ", with message: " + e.getMessage() +
                         ", and stacktrace: " + Arrays.toString(e.getStackTrace()));
                 if (span != null) {
@@ -138,7 +138,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 }
             }
         } else {
-            Loggers.SERVER.warn("Build start triggered for " +  getBuildName(build) + " and plugin not ready. This build will not be traced");
+            Loggers.SERVER.info("Build start triggered for " +  getBuildName(build) + " and plugin not ready. This build will not be traced.");
         }
     }
 
@@ -224,7 +224,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
 
         if(this.spanMap.containsKey(buildTypeId)) {
             Span span = this.spanMap.get(buildTypeId);
-            Loggers.SERVER.info("Tracer initialized and span found for " + buildName);
+            Loggers.SERVER.debug("Tracer initialized and span found for " + buildName);
             try (Scope ignored = span.makeCurrent()){
                 createQueuedEventsSpans(build, buildName, tracer, span);
                 createBuildStepSpans(build, buildName, tracer, span);
@@ -235,9 +235,9 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_PROBLEMS_COUNT, buildStatistics.getCompilationErrorsCount());
 
                 span.addEvent(PluginConstants.EVENT_FINISHED);
-                Loggers.SERVER.info(PluginConstants.EVENT_FINISHED + " event added to span for build " + buildName);
+                Loggers.SERVER.debug(PluginConstants.EVENT_FINISHED + " event added to span for build " + buildName);
             } catch (Exception e) {
-                Loggers.SERVER.error("Exception in Build Finish caused by: " + e.getCause() +
+                Loggers.SERVER.error("Exception in Build Finish caused by: "+ e + e.getCause() +
                         ", with message: " + e.getMessage() +
                         ", and stacktrace: " + Arrays.toString(e.getStackTrace()));
                 span.setStatus(StatusCode.ERROR, PluginConstants.EXCEPTION_ERROR_MESSAGE_DURING_BUILD_FINISH + ": " + e.getMessage());
@@ -246,7 +246,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 this.spanMap.remove(buildTypeId);
             }
         } else {
-            Loggers.SERVER.error("Build end triggered for {} and span not found in plugin spanMap", buildTypeId);
+            Loggers.SERVER.warn("Build end triggered span not found in plugin spanMap for build " + buildName);
         }
     }
 
@@ -268,7 +268,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 childSpan.setAttribute(PluginConstants.ATTRIBUTE_NAME, keySplitList.get(1));
                 childSpan.setAttribute(PluginConstants.ATTRIBUTE_SERVICE_NAME, keySplitList.get(0));
                 childSpan.end(startDateTime + value.longValue(), TimeUnit.MILLISECONDS);
-                Loggers.SERVER.info("Queued span added");
+                Loggers.SERVER.debug("Queued span added");
                 startDateTime+= value.longValue();
             }
         }
@@ -291,7 +291,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 }
                 childSpan.setAttribute(PluginConstants.ATTRIBUTE_SERVICE_NAME, blockLogMessage.getBlockType());
                 childSpan.end(finishedDate.getTime(),TimeUnit.MILLISECONDS);
-                Loggers.SERVER.info("Build step span added");
+                Loggers.SERVER.debug("Build step span added for " + buildStepName);
             }
         }
     }

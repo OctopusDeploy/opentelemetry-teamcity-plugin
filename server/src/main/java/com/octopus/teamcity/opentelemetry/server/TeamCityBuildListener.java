@@ -114,26 +114,28 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     @Override
     public void buildStarted(@NotNull SRunningBuild build) {
         super.buildStarted(build);
-        String buildTypeId = build.getBuildTypeId();
-        String buildName = getBuildName(build);
-        Loggers.SERVER.debug("Build started method triggered for " + buildTypeId);
+        if (pluginReady()) {
+            String buildTypeId = build.getBuildTypeId();
+            String buildName = getBuildName(build);
+            Loggers.SERVER.debug("Build started method triggered for " + buildTypeId);
 
-        Span parentSpan = getParentSpan(build);
-        Span span = createSpan(buildTypeId, parentSpan);
-        this.spanMap.put(buildTypeId, span);
-        Loggers.SERVER.info("Tracer initialized and span created for " + buildName);
-
-        try (Scope ignored = parentSpan.makeCurrent()) {
-            setParentSpanAttributes(build, buildName, span);
-            span.addEvent(PluginConstants.EVENT_STARTED);
-            Loggers.SERVER.info(PluginConstants.EVENT_STARTED + " event added to span for build " + buildName);
+            Span parentSpan = getParentSpan(build);
+            Span span = createSpan(buildTypeId, parentSpan);
             this.spanMap.put(buildTypeId, span);
-        } catch (Exception e) {
-            Loggers.SERVER.error("Exception in Build Start caused by: " + e.getCause() +
-                    ", with message: " + e.getMessage() +
-                    ", and stacktrace: " + Arrays.toString(e.getStackTrace()));
-            if (span != null) {
-                span.setStatus(StatusCode.ERROR, PluginConstants.EXCEPTION_ERROR_MESSAGE_DURING_BUILD_START + ": " + e.getMessage());
+            Loggers.SERVER.info("Tracer initialized and span created for " + buildName);
+
+            try (Scope ignored = parentSpan.makeCurrent()) {
+                setParentSpanAttributes(build, buildName, span);
+                span.addEvent(PluginConstants.EVENT_STARTED);
+                Loggers.SERVER.info(PluginConstants.EVENT_STARTED + " event added to span for build " + buildName);
+                this.spanMap.put(buildTypeId, span);
+            } catch (Exception e) {
+                Loggers.SERVER.error("Exception in Build Start caused by: " + e.getCause() +
+                        ", with message: " + e.getMessage() +
+                        ", and stacktrace: " + Arrays.toString(e.getStackTrace()));
+                if (span != null) {
+                    span.setStatus(StatusCode.ERROR, PluginConstants.EXCEPTION_ERROR_MESSAGE_DURING_BUILD_START + ": " + e.getMessage());
+                }
             }
         }
     }
@@ -192,13 +194,21 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     @Override
     public void buildFinished(@NotNull SRunningBuild build) {
         super.buildFinished(build);
-        buildFinishedOrInterrupted(build);
+        if (pluginReady()) {
+            buildFinishedOrInterrupted(build);
+        }
     }
 
     @Override
     public void buildInterrupted(@NotNull SRunningBuild build) {
         super.buildInterrupted(build);
-        buildFinishedOrInterrupted(build);
+        if (pluginReady()) {
+            buildFinishedOrInterrupted(build);
+        }
+    }
+
+    private boolean pluginReady() {
+        return this.openTelemetry != null && !spanMap.isEmpty();
     }
 
     private void buildFinishedOrInterrupted (SRunningBuild build) {

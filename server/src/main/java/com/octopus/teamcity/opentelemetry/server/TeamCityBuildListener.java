@@ -58,7 +58,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 .setTracerProvider(sdkTracerProvider)
                 .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
                 .buildAndRegisterGlobal();
-        Loggers.SERVER.info("OpenTelemetry plugin started and BuildListener registered");
+        Loggers.SERVER.info("OpenTelemetry plugin started and BuildListener registered.");
 
         this.spanMap = new HashMap<>();
     }
@@ -138,7 +138,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 }
             }
         } else {
-            Loggers.SERVER.warn("Build start triggered for " +  getBuildName(build) + " and plugin not ready. This build will not be traced");
+            Loggers.SERVER.info("Build start triggered for " +  getBuildName(build) + " and plugin not ready. This build will not be traced.");
         }
     }
 
@@ -246,7 +246,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 this.spanMap.remove(buildTypeId);
             }
         } else {
-            Loggers.SERVER.error("Build end triggered for {} and span not found in plugin spanMap", buildTypeId);
+            Loggers.SERVER.warn("Build end triggered span not found in plugin spanMap for build " + buildName);
         }
     }
 
@@ -291,7 +291,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 }
                 childSpan.setAttribute(PluginConstants.ATTRIBUTE_SERVICE_NAME, blockLogMessage.getBlockType());
                 childSpan.end(finishedDate.getTime(),TimeUnit.MILLISECONDS);
-                Loggers.SERVER.info("Build step span added");
+                Loggers.SERVER.info("Build step span added.");
             }
         }
     }

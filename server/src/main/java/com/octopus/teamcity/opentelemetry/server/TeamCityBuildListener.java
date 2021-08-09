@@ -113,22 +113,21 @@ public class TeamCityBuildListener extends BuildServerAdapter {
 
     @Override
     public void buildStarted(@NotNull SRunningBuild build) {
-        super.buildStarted(build);
         if (pluginReady()) {
-            String buildTypeId = build.getBuildTypeId();
+            String buildId = getBuildId(build);
             String buildName = getBuildName(build);
             Loggers.SERVER.debug("Build started method triggered for " + buildName);
 
             Span parentSpan = getParentSpan(build);
-            Span span = createSpan(buildTypeId, parentSpan);
-            this.spanMap.put(buildTypeId, span);
+            Span span = createSpan(buildId, parentSpan);
+            this.spanMap.put(buildId, span);
             Loggers.SERVER.info("Tracer initialized and span created for " + buildName);
 
             try (Scope ignored = parentSpan.makeCurrent()) {
-                setParentSpanAttributes(build, buildName, span);
+                setSpanAttributes(build, buildName, span);
                 span.addEvent(PluginConstants.EVENT_STARTED);
                 Loggers.SERVER.info(PluginConstants.EVENT_STARTED + " event added to span for build " + buildName);
-                this.spanMap.put(buildTypeId, span);
+                this.spanMap.put(buildId, span);
             } catch (Exception e) {
                 Loggers.SERVER.error("Exception in Build Start caused by: " + e + e.getCause() +
                         ", with message: " + e.getMessage() +
@@ -142,6 +141,10 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         }
     }
 
+    private String getBuildId (SRunningBuild build) {
+        return String.valueOf(build.getBuildId());
+    }
+
     private String getBuildName(SRunningBuild build) {
         return build.getBuildType() != null ? build.getBuildType().getName() : null;
     }
@@ -150,25 +153,23 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         Tracer tracer = getTracer();
         BuildPromotion[] topParentBuild = build.getBuildPromotion().findTops();
         BuildPromotion buildPromotion = topParentBuild[0];
+        String buildId = getBuildId(build);
         Loggers.SERVER.debug("Top Build Parent: " + buildPromotion);
-        if (!this.spanMap.containsKey(buildPromotion.getBuildTypeId())) {
-            this.spanMap.put(buildPromotion.getBuildTypeId(), tracer.spanBuilder(buildPromotion.getBuildTypeId()).startSpan());
-        }
-        return this.spanMap.get(buildPromotion.getBuildTypeId());
+        return this.spanMap.computeIfAbsent(buildId, key -> tracer.spanBuilder(buildId).startSpan());
     }
 
-    private Span createSpan(String buildTypeId, Span parentSpan) {
+    private Span createSpan(String buildId, Span parentSpan) {
         Tracer tracer = getTracer();
-        return this.spanMap.containsKey(buildTypeId) ?
-                this.spanMap.get(buildTypeId) :
-                tracer.spanBuilder(buildTypeId).setParent(Context.current().with(parentSpan)).startSpan();
+        return this.spanMap.containsKey(buildId) ?
+                this.spanMap.get(buildId) :
+                tracer.spanBuilder(buildId).setParent(Context.current().with(parentSpan)).startSpan();
     }
 
     private Tracer getTracer() {
         return this.openTelemetry.getTracer(PluginConstants.TRACER_INSTRUMENTATION_NAME);
     }
 
-    private void setParentSpanAttributes(SRunningBuild build, String buildName, Span span) {
+    private void setSpanAttributes(SRunningBuild build, String buildName, Span span) {
         if (build.getBuildType() != null) {
             addAttributeToSpan(span, PluginConstants.ATTRIBUTE_PROJECT_NAME, build.getBuildType().getProject().getName());
         }
@@ -181,6 +182,8 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         if (build.getProjectExternalId() != null ) {
             addAttributeToSpan(span, PluginConstants.ATTRIBUTE_PROJECT_ID, build.getProjectExternalId());
         }
+        addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_TYPE_ID, build.getBuildTypeId());
+        addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_TYPE_EXTERNAL_ID, build.getBuildTypeExternalId());
         addAttributeToSpan(span, PluginConstants.ATTRIBUTE_AGENT_NAME, build.getAgentName());
         addAttributeToSpan(span, PluginConstants.ATTRIBUTE_AGENT_TYPE, build.getAgent().getAgentTypeId());
         addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_NUMBER, build.getBuildNumber());
@@ -214,16 +217,16 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     }
 
     private void buildFinishedOrInterrupted (SRunningBuild build) {
-        String buildTypeId = build.getBuildTypeId();
+        String buildId = getBuildId(build);
         String buildName = getBuildName(build);
-        Loggers.SERVER.debug("Build finished method triggered for " + buildTypeId);
+        Loggers.SERVER.debug("Build finished method triggered for " + buildId);
 
         BuildStatistics buildStatistics = build.getBuildStatistics(
                 BuildStatisticsOptions.ALL_TESTS_NO_DETAILS);
         Tracer tracer = getTracer();
 
-        if(this.spanMap.containsKey(buildTypeId)) {
-            Span span = this.spanMap.get(buildTypeId);
+        if(this.spanMap.containsKey(buildId)) {
+            Span span = this.spanMap.get(buildId);
             Loggers.SERVER.debug("Tracer initialized and span found for " + buildName);
             try (Scope ignored = span.makeCurrent()){
                 createQueuedEventsSpans(build, buildName, tracer, span);
@@ -237,13 +240,13 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 span.addEvent(PluginConstants.EVENT_FINISHED);
                 Loggers.SERVER.debug(PluginConstants.EVENT_FINISHED + " event added to span for build " + buildName);
             } catch (Exception e) {
-                Loggers.SERVER.error("Exception in Build Finish caused by: "+ e + e.getCause() +
+                Loggers.SERVER.error("Exception in Build Finish caused by: " + e + e.getCause() +
                         ", with message: " + e.getMessage() +
                         ", and stacktrace: " + Arrays.toString(e.getStackTrace()));
                 span.setStatus(StatusCode.ERROR, PluginConstants.EXCEPTION_ERROR_MESSAGE_DURING_BUILD_FINISH + ": " + e.getMessage());
             } finally {
                 span.end();
-                this.spanMap.remove(buildTypeId);
+                this.spanMap.remove(buildId);
             }
         } else {
             Loggers.SERVER.warn("Build end triggered span not found in plugin spanMap for build " + buildName);

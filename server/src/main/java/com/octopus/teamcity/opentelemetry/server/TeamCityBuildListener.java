@@ -58,7 +58,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 .setTracerProvider(sdkTracerProvider)
                 .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
                 .buildAndRegisterGlobal();
-        Loggers.SERVER.info("OpenTelemetry plugin started and BuildListener registered.");
+        Loggers.SERVER.info("OTEL_PLUGIN: OpenTelemetry plugin started and BuildListener registered.");
 
         this.spanMap = new HashMap<>();
     }
@@ -71,8 +71,8 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         spanExporterBuilder.setEndpoint(ENDPOINT);
         SpanExporter spanExporter = spanExporterBuilder.build();
 
-        Loggers.SERVER.debug("Opentelemetry export headers: " + mask(headers.toString()));
-        Loggers.SERVER.debug("Opentelemetry export endpoint: " + ENDPOINT);
+        Loggers.SERVER.debug("OTEL_PLUGIN: Opentelemetry export headers: " + mask(headers.toString()));
+        Loggers.SERVER.debug("OTEL_PLUGIN: Opentelemetry export endpoint: " + ENDPOINT);
 
         return BatchSpanProcessor.builder(spanExporter).build();
     }
@@ -94,14 +94,14 @@ public class TeamCityBuildListener extends BuildServerAdapter {
 
     private Map<String, String> getExporterHeaders() throws IllegalStateException {
         Properties internalProperties = TeamCityProperties.getAllProperties().first;
-        Loggers.SERVER.debug("TeamCity internal properties: " + internalProperties);
+        Loggers.SERVER.debug("OTEL_PLUGIN: TeamCity internal properties: " + internalProperties);
 
         for (Map.Entry<Object,Object> entry : internalProperties.entrySet()) {
             String propertyName = entry.getKey().toString();
             if (propertyName.contains(PluginConstants.PROPERTY_KEY_HEADERS)) {
                 Object propertyValue = entry.getValue();
-                Loggers.SERVER.debug("Internal Property Name: " + propertyName);
-                Loggers.SERVER.debug("Internal Property Value: " + propertyValue);
+                Loggers.SERVER.debug("OTEL_PLUGIN: Internal Property Name: " + propertyName);
+                Loggers.SERVER.debug("OTEL_PLUGIN: Internal Property Value: " + propertyValue);
 
                 return Arrays.stream(propertyValue.toString().split(","))
                         .map(propertyValuesSplit -> propertyValuesSplit.split(":"))
@@ -113,23 +113,24 @@ public class TeamCityBuildListener extends BuildServerAdapter {
 
     @Override
     public void buildStarted(@NotNull SRunningBuild build) {
+        super.buildStarted(build);
         if (pluginReady()) {
-            String buildId = getBuildId(build);
+            String buildTypeId = build.getBuildTypeId();
             String buildName = getBuildName(build);
-            Loggers.SERVER.debug("Build started method triggered for " + buildName);
+            Loggers.SERVER.debug("OTEL_PLUGIN: Build started method triggered for " + buildName);
 
             Span parentSpan = getParentSpan(build);
-            Span span = createSpan(buildId, parentSpan);
-            this.spanMap.put(buildId, span);
-            Loggers.SERVER.info("Tracer initialized and span created for " + buildName);
+            Span span = createSpan(buildTypeId, parentSpan);
+            this.spanMap.put(buildTypeId, span);
+            Loggers.SERVER.info("OTEL_PLUGIN: Tracer initialized and span created for " + buildName);
 
             try (Scope ignored = parentSpan.makeCurrent()) {
-                setSpanAttributes(build, buildName, span);
+                setParentSpanAttributes(build, buildName, span);
                 span.addEvent(PluginConstants.EVENT_STARTED);
                 Loggers.SERVER.info(PluginConstants.EVENT_STARTED + " event added to span for build " + buildName);
-                this.spanMap.put(buildId, span);
+                this.spanMap.put(buildTypeId, span);
             } catch (Exception e) {
-                Loggers.SERVER.error("Exception in Build Start caused by: " + e + e.getCause() +
+                Loggers.SERVER.error("OTEL_PLUGIN: Exception in Build Start caused by: " + e + e.getCause() +
                         ", with message: " + e.getMessage() +
                         ", and stacktrace: " + Arrays.toString(e.getStackTrace()));
                 if (span != null) {
@@ -137,12 +138,8 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 }
             }
         } else {
-            Loggers.SERVER.info("Build start triggered for " +  getBuildName(build) + " and plugin not ready. This build will not be traced.");
+            Loggers.SERVER.info("OTEL_PLUGIN: Build start triggered for " +  getBuildName(build) + " and plugin not ready. This build will not be traced.");
         }
-    }
-
-    private String getBuildId (SRunningBuild build) {
-        return String.valueOf(build.getBuildId());
     }
 
     private String getBuildName(SRunningBuild build) {
@@ -153,23 +150,25 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         Tracer tracer = getTracer();
         BuildPromotion[] topParentBuild = build.getBuildPromotion().findTops();
         BuildPromotion buildPromotion = topParentBuild[0];
-        String buildId = getBuildId(build);
-        Loggers.SERVER.debug("Top Build Parent: " + buildPromotion);
-        return this.spanMap.computeIfAbsent(buildId, key -> tracer.spanBuilder(buildId).startSpan());
+        Loggers.SERVER.debug("OTEL_PLUGIN: Top Build Parent: " + buildPromotion);
+        if (!this.spanMap.containsKey(buildPromotion.getBuildTypeId())) {
+            this.spanMap.put(buildPromotion.getBuildTypeId(), tracer.spanBuilder(buildPromotion.getBuildTypeId()).startSpan());
+        }
+        return this.spanMap.get(buildPromotion.getBuildTypeId());
     }
 
-    private Span createSpan(String buildId, Span parentSpan) {
+    private Span createSpan(String buildTypeId, Span parentSpan) {
         Tracer tracer = getTracer();
-        return this.spanMap.containsKey(buildId) ?
-                this.spanMap.get(buildId) :
-                tracer.spanBuilder(buildId).setParent(Context.current().with(parentSpan)).startSpan();
+        return this.spanMap.containsKey(buildTypeId) ?
+                this.spanMap.get(buildTypeId) :
+                tracer.spanBuilder(buildTypeId).setParent(Context.current().with(parentSpan)).startSpan();
     }
 
     private Tracer getTracer() {
         return this.openTelemetry.getTracer(PluginConstants.TRACER_INSTRUMENTATION_NAME);
     }
 
-    private void setSpanAttributes(SRunningBuild build, String buildName, Span span) {
+    private void setParentSpanAttributes(SRunningBuild build, String buildName, Span span) {
         if (build.getBuildType() != null) {
             addAttributeToSpan(span, PluginConstants.ATTRIBUTE_PROJECT_NAME, build.getBuildType().getProject().getName());
         }
@@ -182,8 +181,6 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         if (build.getProjectExternalId() != null ) {
             addAttributeToSpan(span, PluginConstants.ATTRIBUTE_PROJECT_ID, build.getProjectExternalId());
         }
-        addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_TYPE_ID, build.getBuildTypeId());
-        addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_TYPE_EXTERNAL_ID, build.getBuildTypeExternalId());
         addAttributeToSpan(span, PluginConstants.ATTRIBUTE_AGENT_NAME, build.getAgentName());
         addAttributeToSpan(span, PluginConstants.ATTRIBUTE_AGENT_TYPE, build.getAgent().getAgentTypeId());
         addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_NUMBER, build.getBuildNumber());
@@ -192,7 +189,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     }
 
     private void addAttributeToSpan(Span span, String attributeName, Object attributeValue) {
-        Loggers.SERVER.debug("Adding attribute to span " + attributeName + "=" + attributeValue);
+        Loggers.SERVER.debug("OTEL_PLUGIN: Adding attribute to span " + attributeName + "=" + attributeValue);
         span.setAttribute(attributeName, attributeValue.toString());
     }
 
@@ -217,17 +214,17 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     }
 
     private void buildFinishedOrInterrupted (SRunningBuild build) {
-        String buildId = getBuildId(build);
+        String buildTypeId = build.getBuildTypeId();
         String buildName = getBuildName(build);
-        Loggers.SERVER.debug("Build finished method triggered for " + buildId);
+        Loggers.SERVER.debug("OTEL_PLUGIN: Build finished method triggered for " + buildTypeId);
 
         BuildStatistics buildStatistics = build.getBuildStatistics(
                 BuildStatisticsOptions.ALL_TESTS_NO_DETAILS);
         Tracer tracer = getTracer();
 
-        if(this.spanMap.containsKey(buildId)) {
-            Span span = this.spanMap.get(buildId);
-            Loggers.SERVER.debug("Tracer initialized and span found for " + buildName);
+        if(this.spanMap.containsKey(buildTypeId)) {
+            Span span = this.spanMap.get(buildTypeId);
+            Loggers.SERVER.debug("OTEL_PLUGIN: Tracer initialized and span found for " + buildName);
             try (Scope ignored = span.makeCurrent()){
                 createQueuedEventsSpans(build, buildName, tracer, span);
                 createBuildStepSpans(build, buildName, tracer, span);
@@ -240,30 +237,30 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 span.addEvent(PluginConstants.EVENT_FINISHED);
                 Loggers.SERVER.debug(PluginConstants.EVENT_FINISHED + " event added to span for build " + buildName);
             } catch (Exception e) {
-                Loggers.SERVER.error("Exception in Build Finish caused by: " + e + e.getCause() +
+                Loggers.SERVER.error("OTEL_PLUGIN: Exception in Build Finish caused by: "+ e + e.getCause() +
                         ", with message: " + e.getMessage() +
                         ", and stacktrace: " + Arrays.toString(e.getStackTrace()));
                 span.setStatus(StatusCode.ERROR, PluginConstants.EXCEPTION_ERROR_MESSAGE_DURING_BUILD_FINISH + ": " + e.getMessage());
             } finally {
                 span.end();
-                this.spanMap.remove(buildId);
+                this.spanMap.remove(buildTypeId);
             }
         } else {
-            Loggers.SERVER.warn("Build end triggered span not found in plugin spanMap for build " + buildName);
+            Loggers.SERVER.warn("OTEL_PLUGIN: Build end triggered span not found in plugin spanMap for build " + buildName);
         }
     }
 
     private void createQueuedEventsSpans(SRunningBuild build, String buildName, Tracer tracer, Span span) {
         long startDateTime = build.getQueuedDate().getTime();
         Map<String, BigDecimal> reportedStatics = build.getStatisticValues();
-        Loggers.SERVER.info("Retrieving queued event spans for build " + buildName);
+        Loggers.SERVER.info("OTEL_PLUGIN: Retrieving queued event spans for build " + buildName);
 
         for (Map.Entry<String,BigDecimal> entry : reportedStatics.entrySet()) {
             String key = entry.getKey();
-            Loggers.SERVER.debug("Queue item: " + key);
+            Loggers.SERVER.debug("OTEL_PLUGIN: Queue item: " + key);
             if (key.contains("queueWaitReason:")) {
                 BigDecimal value = entry.getValue();
-                Loggers.SERVER.debug("Queue value: " + value);
+                Loggers.SERVER.debug("OTEL_PLUGIN: Queue value: " + value);
                 Span childSpan = createChildSpan(tracer, span, key, startDateTime);
                 List<String> keySplitList = Pattern.compile(":")
                         .splitAsStream(key)
@@ -271,20 +268,20 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 childSpan.setAttribute(PluginConstants.ATTRIBUTE_NAME, keySplitList.get(1));
                 childSpan.setAttribute(PluginConstants.ATTRIBUTE_SERVICE_NAME, keySplitList.get(0));
                 childSpan.end(startDateTime + value.longValue(), TimeUnit.MILLISECONDS);
-                Loggers.SERVER.debug("Queued span added");
+                Loggers.SERVER.debug("OTEL_PLUGIN: Queued span added");
                 startDateTime+= value.longValue();
             }
         }
     }
 
     private void createBuildStepSpans(SRunningBuild build, String buildName, Tracer tracer, Span span) {
-        Loggers.SERVER.info("Retrieving build step event spans for build " + buildName);
+        Loggers.SERVER.info("OTEL_PLUGIN: Retrieving build step event spans for build " + buildName);
         List<LogMessage> buildStepLogs = getBuildStepLogs(build);
         for (LogMessage logmessage: buildStepLogs) {
             BlockLogMessage blockLogMessage = (BlockLogMessage) logmessage;
             Date finishedDate = blockLogMessage.getFinishDate();
             String buildStepName = blockLogMessage.getText();
-            Loggers.SERVER.debug("Build Step " + buildStepName + " with finish time " + finishedDate);
+            Loggers.SERVER.debug("OTEL_PLUGIN: Build Step " + buildStepName + " with finish time " + finishedDate);
             if (finishedDate != null) {
                 Span childSpan = createChildSpan(tracer, span, blockLogMessage.getText(), blockLogMessage.getTimestamp().getTime());
                 if (blockLogMessage.getBlockDescription() != null) {
@@ -294,13 +291,13 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 }
                 childSpan.setAttribute(PluginConstants.ATTRIBUTE_SERVICE_NAME, blockLogMessage.getBlockType());
                 childSpan.end(finishedDate.getTime(),TimeUnit.MILLISECONDS);
-                Loggers.SERVER.debug("Build step span added for " + buildStepName);
+                Loggers.SERVER.debug("OTEL_PLUGIN: Build step span added for " + buildStepName);
             }
         }
     }
 
     private Span createChildSpan(Tracer tracer, Span parentSpan, String spanName, long startTime) {
-        Loggers.SERVER.info("Creating child span " + spanName + " under parent " + parentSpan);
+        Loggers.SERVER.info("OTEL_PLUGIN: Creating child span " + spanName + " under parent " + parentSpan);
         return tracer.spanBuilder(spanName)
                 .setParent(Context.current().with(parentSpan))
                 .setStartTimestamp(startTime,TimeUnit.MILLISECONDS)
@@ -317,11 +314,11 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     }
 
     private void getArtifactAttributes(SRunningBuild build, String buildName, Span span) {
-        Loggers.SERVER.info("Retrieving build artifact attributes for build " + buildName);
+        Loggers.SERVER.info("OTEL_PLUGIN: Retrieving build artifact attributes for build " + buildName);
         BuildArtifacts buildArtifacts = build.getArtifacts(BuildArtifactsViewMode.VIEW_ALL);
         buildArtifacts.iterateArtifacts(artifact -> {
             span.setAttribute(artifact.getName() + PluginConstants.ATTRIBUTE_ARTIFACT_SIZE, artifact.getSize());
-            Loggers.SERVER.debug("Build artifact attribute " + artifact.getName() + "=" + artifact.getSize());
+            Loggers.SERVER.debug("OTEL_PLUGIN: Build artifact attribute " + artifact.getName() + "=" + artifact.getSize());
             return BuildArtifacts.BuildArtifactsProcessor.Continuation.CONTINUE;
         });
     }

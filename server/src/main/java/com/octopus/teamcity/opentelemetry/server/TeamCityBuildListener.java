@@ -224,7 +224,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
 
         if(this.spanMap.containsKey(buildTypeId)) {
             Span span = this.spanMap.get(buildTypeId);
-            Loggers.SERVER.info("Tracer initialized and span found for " + buildName);
+            Loggers.SERVER.debug("Tracer initialized and span found for " + buildName);
             try (Scope ignored = span.makeCurrent()){
                 createQueuedEventsSpans(build, buildName, tracer, span);
                 createBuildStepSpans(build, buildName, tracer, span);
@@ -235,7 +235,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_PROBLEMS_COUNT, buildStatistics.getCompilationErrorsCount());
 
                 span.addEvent(PluginConstants.EVENT_FINISHED);
-                Loggers.SERVER.info(PluginConstants.EVENT_FINISHED + " event added to span for build " + buildName);
+                Loggers.SERVER.debug(PluginConstants.EVENT_FINISHED + " event added to span for build " + buildName);
             } catch (Exception e) {
                 Loggers.SERVER.error("Exception in Build Finish caused by: "+ e + e.getCause() +
                         ", with message: " + e.getMessage() +
@@ -268,7 +268,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 childSpan.setAttribute(PluginConstants.ATTRIBUTE_NAME, keySplitList.get(1));
                 childSpan.setAttribute(PluginConstants.ATTRIBUTE_SERVICE_NAME, keySplitList.get(0));
                 childSpan.end(startDateTime + value.longValue(), TimeUnit.MILLISECONDS);
-                Loggers.SERVER.info("Queued span added");
+                Loggers.SERVER.debug("Queued span added");
                 startDateTime+= value.longValue();
             }
         }
@@ -291,7 +291,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 }
                 childSpan.setAttribute(PluginConstants.ATTRIBUTE_SERVICE_NAME, blockLogMessage.getBlockType());
                 childSpan.end(finishedDate.getTime(),TimeUnit.MILLISECONDS);
-                Loggers.SERVER.info("Build step span added.");
+                Loggers.SERVER.debug("Build step span added for " + buildStepName);
             }
         }
     }

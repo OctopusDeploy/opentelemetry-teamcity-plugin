@@ -21,7 +21,7 @@ public class PluginConstants {
     public static final String ATTRIBUTE_SUCCESS_STATUS = TRACER_INSTRUMENTATION_NAME + ".success_status";
     public static final String ATTRIBUTE_FAILED_TEST_COUNT = TRACER_INSTRUMENTATION_NAME + ".failed_test_count";
     public static final String ATTRIBUTE_BUILD_PROBLEMS_COUNT = TRACER_INSTRUMENTATION_NAME + ".build_problems_count";
-    public static final String ATTRIBUTE_ARTIFACT_SIZE = TRACER_INSTRUMENTATION_NAME + "_artifact_size";
+    public static final String ATTRIBUTE_ARTIFACT_SIZE = "_artifact_size";
 
     public static final String EVENT_STARTED = "Build Started";
     public static final String EVENT_FINISHED = "Build Finished";

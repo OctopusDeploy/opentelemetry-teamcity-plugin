@@ -172,7 +172,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 this.otelHelper.removeSpanFromMap(buildId);
             }
         } else {
-            Loggers.SERVER.warn("OTEL_PLUGIN: Build end triggered span not found in plugin spanMap for build " + buildName);
+            Loggers.SERVER.warn("OTEL_PLUGIN: Build end triggered but span not found for build " + buildName);
         }
     }
 

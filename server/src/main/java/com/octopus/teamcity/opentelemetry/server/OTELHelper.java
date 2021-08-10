@@ -60,8 +60,8 @@ public class OTELHelper {
         return BatchSpanProcessor.builder(spanExporter).build();
     }
 
-    public boolean pluginReady() {
-        return this.openTelemetry != null;
+    public boolean isReady() {
+        return this.openTelemetry != null && this.tracer != null && this.spanMap != null;
     }
 
     public Span getParentSpan(String buildId) {
@@ -69,9 +69,7 @@ public class OTELHelper {
     }
 
     public Span createSpan(String buildId, Span parentSpan) {
-        return this.spanMap.containsKey(buildId) ?
-                this.spanMap.get(buildId) :
-                this.tracer.spanBuilder(buildId).setParent(Context.current().with(parentSpan)).startSpan();
+        return this.spanMap.computeIfAbsent(buildId, key -> this.tracer.spanBuilder(buildId).setParent(Context.current().with(parentSpan)).startSpan());
     }
 
     public Span createChildSpan(Span parentSpan, String spanName, long startTime) {
@@ -80,10 +78,6 @@ public class OTELHelper {
                 .setParent(Context.current().with(parentSpan))
                 .setStartTimestamp(startTime, TimeUnit.MILLISECONDS)
                 .startSpan();
-    }
-
-    public void addSpanToMap(String buildId, Span span) {
-        this.spanMap.put(buildId, span);
     }
 
     public void removeSpanFromMap(String buildId) {

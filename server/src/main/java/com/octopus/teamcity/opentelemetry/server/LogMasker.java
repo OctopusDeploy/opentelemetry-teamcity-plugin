@@ -5,6 +5,8 @@ import java.util.regex.Pattern;
 
 public class LogMasker {
 
+    public static final String API_KEY_REPLACEMENT_REGEX = "XXXXXXXXXXXXXXXX";
+
     private LogMasker() {
         throw new IllegalStateException("Utility class LogMasker should not be instantiated ");
     }
@@ -12,8 +14,6 @@ public class LogMasker {
     public static String mask(String message) {
         final String API_KEY_REGEX = "([a-z0-9]{31})";
         final Pattern apikeyPattern = Pattern.compile(API_KEY_REGEX);
-        final String API_KEY_REPLACEMENT_REGEX = "XXXXXXXXXXXXXXXX";
-
         StringBuilder buffer = new StringBuilder();
 
         Matcher matcher = apikeyPattern.matcher(message);

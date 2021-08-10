@@ -30,7 +30,6 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         buildServerListenerEventDispatcher.addListener(this);
         Loggers.SERVER.info("OTEL_PLUGIN: OTEL_PLUGIN: BuildListener registered.");
         this.otelHelper = new OTELHelper(getExporterHeaders(), ENDPOINT);
-
     }
 
     private Map<String, String> getExporterHeaders() throws IllegalStateException {
@@ -54,7 +53,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
 
     @Override
     public void buildStarted(@NotNull SRunningBuild build) {
-        if (this.otelHelper.pluginReady()) {
+        if (buildListenerReady()) {
             String buildId = getBuildId(build);
             String buildName = getBuildName(build);
             Loggers.SERVER.debug("OTEL_PLUGIN: Build started method triggered for " + buildName);
@@ -80,6 +79,10 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         } else {
             Loggers.SERVER.info("OTEL_PLUGIN: Build start triggered for " +  getBuildName(build) + " and plugin not ready. This build will not be traced.");
         }
+    }
+
+    private boolean buildListenerReady() {
+        return (this.otelHelper != null) && this.otelHelper.pluginReady();
     }
 
     private String getBuildId (SRunningBuild build) {
@@ -124,7 +127,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     @Override
     public void buildFinished(@NotNull SRunningBuild build) {
         super.buildFinished(build);
-        if (this.otelHelper.pluginReady()) {
+        if (buildListenerReady()) {
             buildFinishedOrInterrupted(build);
         }
     }
@@ -132,7 +135,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     @Override
     public void buildInterrupted(@NotNull SRunningBuild build) {
         super.buildInterrupted(build);
-        if (this.otelHelper.pluginReady()) {
+        if (buildListenerReady()) {
             buildFinishedOrInterrupted(build);
         }
     }

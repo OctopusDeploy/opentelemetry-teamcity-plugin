@@ -61,7 +61,6 @@ public class TeamCityBuildListener extends BuildServerAdapter {
             String parentBuildId = getParentBuild(build);
             Span parentSpan = this.otelHelper.getParentSpan(parentBuildId);
             Span span = this.otelHelper.createSpan(buildId, parentSpan);
-            this.otelHelper.addSpanToMap(buildId, span);
             Loggers.SERVER.info("OTEL_PLUGIN: Span created for " + buildName);
 
             try (Scope ignored = parentSpan.makeCurrent()) {
@@ -82,7 +81,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     }
 
     private boolean buildListenerReady() {
-        return (this.otelHelper != null) && this.otelHelper.pluginReady();
+        return (this.otelHelper != null) && this.otelHelper.isReady();
     }
 
     private String getBuildId (SRunningBuild build) {

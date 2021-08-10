@@ -215,11 +215,11 @@ public class TeamCityBuildListener extends BuildServerAdapter {
             if (finishedDate != null) {
                 Span childSpan;
                 if (parentBlockMessage != null) {
-                    // BlockMessage has a parent message, therefore create a child span referencing that parent
+                    // BlockMessage has a parent message, create a child span referencing that parent blockMessage span
                     Span parentBlockMessageSpan = this.otelHelper.getParentSpan(parentBlockMessage.getText() + parentBlockMessage.getTimestamp());
                     childSpan = this.otelHelper.createChildSpan(parentBlockMessageSpan, buildStepName, blockLogMessage.getTimestamp().getTime());
                 } else {
-                    // BlockMessage does not have a parent message, therefore the span will be created span parent span referenced to the build
+                    // BlockMessage does not have a parent message, create a child span that will be referencing the build as the parent span.
                     childSpan = this.otelHelper.createChildSpan(span, buildStepName, blockLogMessage.getTimestamp().getTime());
                 }
                 if (blockLogMessage.getBlockDescription() != null) {

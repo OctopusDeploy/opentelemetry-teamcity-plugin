@@ -13,7 +13,7 @@ You can use OpenTelemetry to instrument, generate, collect, and export telemetry
 1. Build the plugin using the "Building" instructions below.
 2. In your TeamCity instance go to Administration -> Diagnostics -> Internal Properties.
     1. Ensure you update add a property `octopus.teamcity.opentelemetry.plugin.endpoint=<your_opentelemetry_collector_endpoint>`
-    2. Ensure you update add a property `octopus.teamcity.opentelemetry.plugin.headers=<your_opentelemetry_collector_endpoint_required_headers>`
+    2. Ensure you update add a property `octopus.teamcity.opentelemetry.plugin.headers=<your_opentelemetry_collector_endpoint_headers>`. Separate each key value pair with `=`, and separate each header with a `,`
 3. Alternatively open the `internal.properties` file location in your TeamCity instance `data_dir/config` folder and update the above properties
 4. Copy to .zip to your TeamCity data_dir/plugins directory and restart TeamCity server OR install the .zip using your TeamCity instance UI
 

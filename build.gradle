@@ -64,7 +64,7 @@ apply plugin: "distribution"
 
 
 distZip {
-    archiveName = "Octopus.TeamCity.Opentelemetry." + rootProject.version + ".zip"
+    archiveName = "Octopus.TeamCity.OpenTelemetry." + rootProject.version + ".zip"
 }
 
 distributions {
@@ -86,6 +86,6 @@ task copyZip(type: Copy) {
     doFirst {
         assert file("./build/distributions/Octopus.TeamCity.OpenTelemtery.${rootProject.version}.zip").exists()
     }
-    from "build/distributions/Octopus.TeamCity.Opentelemetry.${rootProject.version}.zip"
+    from "build/distributions/Octopus.TeamCity.OpenTelemetry.${rootProject.version}.zip"
     into new File('/Library/TeamCity/data/plugins')
 }

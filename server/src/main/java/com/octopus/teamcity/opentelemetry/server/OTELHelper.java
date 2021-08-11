@@ -73,20 +73,15 @@ public class OTELHelper {
         return this.spanMap.computeIfAbsent(spanName, key -> this.tracer.spanBuilder(spanName).setParent(Context.current().with(parentSpan)).startSpan());
     }
 
-    public Span createSpan(String spanName, Span parentSpan, long startTime) {
-        Loggers.SERVER.info("OTEL_PLUGIN: Creating child span " + spanName + " under parent " + parentSpan + " with start time " + startTime);
-        return this.spanMap.computeIfAbsent(spanName, key -> this.tracer.spanBuilder(spanName).setParent(Context.current().with(parentSpan)).setStartTimestamp(startTime, TimeUnit.MILLISECONDS).startSpan());
-    }
-
     public Span createTransientSpan(String spanName, Span parentSpan, long startTime) {
         return this.tracer.spanBuilder(spanName).setParent(Context.current().with(parentSpan)).setStartTimestamp(startTime, TimeUnit.MILLISECONDS).startSpan();
     }
 
-    public void removeSpanFromMap(String buildId) {
+    public void removeSpan(String buildId) {
         this.spanMap.remove(buildId);
     }
 
-    public Span getSpanFromMap(String buildId) {
+    public Span getSpan(String buildId) {
         return this.spanMap.get(buildId);
     }
 

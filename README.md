@@ -1,6 +1,6 @@
 # TeamCity Build Opentelemetry Exporter Plugin
 
-A custom TeamCity plugin that registers a build listener to send build trace data to an opentelemetry collector external endpoint.
+A custom TeamCity plugin that sends build trace data to an OpenTelemetry collector endpoint.
 
 ## What is OpenTelemetry
 
@@ -73,4 +73,3 @@ To test the plugin from code:
 
 To clean the project root directory of builds:
 3. Inside the root project folder run `./gradlew clean`. The gradlew script will download Gradle for you if it is not already installed.
-

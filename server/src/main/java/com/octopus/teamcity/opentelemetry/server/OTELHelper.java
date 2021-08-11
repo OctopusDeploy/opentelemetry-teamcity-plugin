@@ -19,16 +19,15 @@ import io.opentelemetry.sdk.trace.export.SpanExporter;
 import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
 import jetbrains.buildServer.log.Loggers;
 
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 public class OTELHelper {
 
     private final OpenTelemetry openTelemetry;
     private final Tracer tracer;
-    private final HashMap<String, Span> spanMap;
+    private final ConcurrentHashMap<String, Span> spanMap;
 
     public OTELHelper(Map<String, String> headers, String exporterEndpoint) {
 
@@ -46,7 +45,7 @@ public class OTELHelper {
                 .buildAndRegisterGlobal();
         Loggers.SERVER.info("OTEL_PLUGIN: OTEL_PLUGIN: OpenTelemetry plugin started.");
         this.tracer = this.openTelemetry.getTracer(PluginConstants.TRACER_INSTRUMENTATION_NAME);
-        this.spanMap = new HashMap<>();
+        this.spanMap = new ConcurrentHashMap<>();
     }
 
     private SpanProcessor buildSpanProcessor(Map<String, String> headers, String exporterEndpoint) {
@@ -79,6 +78,10 @@ public class OTELHelper {
         return this.spanMap.computeIfAbsent(spanName, key -> this.tracer.spanBuilder(spanName).setParent(Context.current().with(parentSpan)).setStartTimestamp(startTime, TimeUnit.MILLISECONDS).startSpan());
     }
 
+    public Span createTransientSpan(String spanName, Span parentSpan, long startTime) {
+        return this.tracer.spanBuilder(spanName).setParent(Context.current().with(parentSpan)).setStartTimestamp(startTime, TimeUnit.MILLISECONDS).startSpan();
+    }
+
     public void removeSpanFromMap(String buildId) {
         this.spanMap.remove(buildId);
     }
@@ -90,11 +93,5 @@ public class OTELHelper {
     public void addAttributeToSpan(Span span, String attributeName, Object attributeValue) {
         Loggers.SERVER.debug("OTEL_PLUGIN: Adding attribute to span " + attributeName + "=" + attributeValue);
         span.setAttribute(attributeName, attributeValue.toString());
-    }
-
-    public void cleanSpansFromMap(List<String> keys) {
-        for (String key: keys) {
-            this.spanMap.remove(key);
-        }
     }
 }

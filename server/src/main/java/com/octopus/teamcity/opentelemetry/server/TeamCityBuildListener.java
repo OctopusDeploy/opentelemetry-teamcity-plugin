@@ -6,6 +6,7 @@ import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
 
 import jetbrains.buildServer.log.Loggers;
+import jetbrains.buildServer.messages.DefaultMessagesInfo;
 import jetbrains.buildServer.serverSide.*;
 import jetbrains.buildServer.serverSide.artifacts.BuildArtifacts;
 import jetbrains.buildServer.serverSide.artifacts.BuildArtifactsViewMode;
@@ -100,7 +101,6 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         return String.valueOf(buildPromotion.getId());
     }
 
-
     private void setSpanBuildAttributes(SRunningBuild build, String buildName, Span span) {
         if (build.getBuildType() != null) {
             this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_PROJECT_NAME, build.getBuildType().getProject().getName());
@@ -153,7 +153,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
             try (Scope ignored = span.makeCurrent()){
                 createQueuedEventsSpans(build, buildName, span);
                 createBuildStepSpans(build, buildName, span);
-                getArtifactAttributes(build, buildName, span);
+                setArtifactAttributes(build, buildName, span);
 
                 this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_SUCCESS_STATUS, build.getBuildStatus().isSuccessful());
                 this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_FAILED_TEST_COUNT, buildStatistics.getFailedTestCount());
@@ -175,7 +175,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         }
     }
 
-    private void createQueuedEventsSpans(SRunningBuild build, String buildName, Span parentSpan) {
+    private void createQueuedEventsSpans(SRunningBuild build, String buildName, Span buildSpan) {
         long startDateTime = build.getQueuedDate().getTime();
         Map<String, BigDecimal> reportedStatics = build.getStatisticValues();
         Loggers.SERVER.info("OTEL_PLUGIN: Retrieving queued event spans for build " + buildName);
@@ -186,7 +186,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
             if (key.contains("queueWaitReason:")) {
                 BigDecimal value = entry.getValue();
                 Loggers.SERVER.debug("OTEL_PLUGIN: Queue value: " + value);
-                Span childSpan = this.otelHelper.createChildSpan(parentSpan, key, startDateTime);
+                Span childSpan = this.otelHelper.createTransientSpan(key, buildSpan, startDateTime);
                 List<String> keySplitList = Pattern.compile(":")
                         .splitAsStream(key)
                         .collect(Collectors.toList());
@@ -199,30 +199,48 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         }
     }
 
-    private void createBuildStepSpans(SRunningBuild build, String buildName, Span span) {
+    private void createBuildStepSpans(SRunningBuild build, String buildName, Span buildSpan) {
+        Map<String, Span> blockMessageSpanMap = new HashMap<>();
         Loggers.SERVER.info("OTEL_PLUGIN: Retrieving build step event spans for build " + buildName);
         List<LogMessage> buildBlockLogs = getBuildBlockLogs(build);
-        createBlockMessageSpans(buildBlockLogs, span);
+        for (LogMessage logMessage: buildBlockLogs) {
+            BlockLogMessage blockLogMessage = (BlockLogMessage) logMessage;
+            createBlockMessageSpan(blockLogMessage, buildSpan, blockMessageSpanMap);
+        }
     }
 
-    private void createBlockMessageSpans (List<LogMessage> buildBlockLogs, Span span) {
-        for (LogMessage logmessage: buildBlockLogs) {
-            BlockLogMessage blockLogMessage = (BlockLogMessage) logmessage;
-            Date finishedDate = blockLogMessage.getFinishDate();
-            String buildStepName = blockLogMessage.getText();
-            Loggers.SERVER.debug("OTEL_PLUGIN: Build Step " + buildStepName + " with finish time " + finishedDate);
-            if (finishedDate != null) {
-                Span childSpan = this.otelHelper.createChildSpan(span, blockLogMessage.getText(), blockLogMessage.getTimestamp().getTime());
-                if (blockLogMessage.getBlockDescription() != null) {
-                    childSpan.setAttribute(PluginConstants.ATTRIBUTE_NAME, buildStepName + ": " + blockLogMessage.getBlockDescription());
+    private void createBlockMessageSpan(BlockLogMessage blockLogMessage, Span buildSpan, Map<String, Span> blockMessageSpanMap) {
+        Date blockMessageFinishDate = blockLogMessage.getFinishDate();
+        String blockMessageStepName = blockLogMessage.getText() + " " + blockMessageFinishDate;
+        Loggers.SERVER.debug("OTEL_PLUGIN: Build Step " + blockMessageStepName);
+        if (blockMessageFinishDate != null) { // This filters out creating duplicate spans for Builds from their build blockMessages
+            BlockLogMessage parentBlockMessage = blockLogMessage.getParent();
+            Span parentSpan;
+            if (parentBlockMessage != null) {
+                if (parentBlockMessage.getBlockType().equals(DefaultMessagesInfo.BLOCK_TYPE_BUILD)) {
+                    parentSpan = buildSpan;
                 } else {
-                    childSpan.setAttribute(PluginConstants.ATTRIBUTE_NAME, buildStepName);
+                    parentSpan = blockMessageSpanMap.get(parentBlockMessage.getText() + " " + parentBlockMessage.getFinishDate());
                 }
-                childSpan.setAttribute(PluginConstants.ATTRIBUTE_SERVICE_NAME, blockLogMessage.getBlockType());
-                childSpan.end(finishedDate.getTime(),TimeUnit.MILLISECONDS);
-                Loggers.SERVER.debug("OTEL_PLUGIN: Build step span added for " + buildStepName);
+            } else {
+                parentSpan = buildSpan;
             }
+            Span childSpan = this.otelHelper.createTransientSpan(blockMessageStepName, parentSpan, blockLogMessage.getTimestamp().getTime());
+            blockMessageSpanMap.put(blockMessageStepName, childSpan);
+            Loggers.SERVER.debug("OTEL_PLUGIN: Build step span added for " + blockMessageStepName);
+            setBlockMessageSpanAttributes(blockLogMessage, childSpan);
+            childSpan.end(blockMessageFinishDate.getTime(),TimeUnit.MILLISECONDS);
         }
+    }
+
+    private void setBlockMessageSpanAttributes(BlockLogMessage blockLogMessage, Span span) {
+        if (blockLogMessage.getBlockDescription() != null) {
+            // Only the Build Step Types "teamcity-build-step-type" has blockDescriptions
+            this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_NAME, blockLogMessage.getText() + ": " + blockLogMessage.getBlockDescription());
+        } else {
+            this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_NAME, blockLogMessage.getText());
+        }
+        this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_SERVICE_NAME, blockLogMessage.getBlockType());
     }
 
     private List<LogMessage> getBuildBlockLogs(SRunningBuild build) {
@@ -236,7 +254,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         return buildLogs;
     }
 
-    private void getArtifactAttributes(SRunningBuild build, String buildName, Span span) {
+    private void setArtifactAttributes(SRunningBuild build, String buildName, Span span) {
         Loggers.SERVER.info("OTEL_PLUGIN: Retrieving build artifact attributes for build " + buildName);
         BuildArtifacts buildArtifacts = build.getArtifacts(BuildArtifactsViewMode.VIEW_ALL);
         buildArtifacts.iterateArtifacts(artifact -> {

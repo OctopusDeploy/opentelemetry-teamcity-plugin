@@ -20,6 +20,7 @@ import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
 import jetbrains.buildServer.log.Loggers;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -68,16 +69,14 @@ public class OTELHelper {
         return this.spanMap.computeIfAbsent(buildId, key -> this.tracer.spanBuilder(buildId).startSpan());
     }
 
-    public Span createSpan(String buildId, Span parentSpan) {
-        return this.spanMap.computeIfAbsent(buildId, key -> this.tracer.spanBuilder(buildId).setParent(Context.current().with(parentSpan)).startSpan());
+    public Span createSpan(String spanName, Span parentSpan) {
+        Loggers.SERVER.info("OTEL_PLUGIN: Creating child span " + spanName + " under parent " + parentSpan);
+        return this.spanMap.computeIfAbsent(spanName, key -> this.tracer.spanBuilder(spanName).setParent(Context.current().with(parentSpan)).startSpan());
     }
 
-    public Span createChildSpan(Span parentSpan, String spanName, long startTime) {
-        Loggers.SERVER.info("OTEL_PLUGIN: Creating child span " + spanName + " under parent " + parentSpan);
-        return this.tracer.spanBuilder(spanName)
-                .setParent(Context.current().with(parentSpan))
-                .setStartTimestamp(startTime, TimeUnit.MILLISECONDS)
-                .startSpan();
+    public Span createSpan(String spanName, Span parentSpan, long startTime) {
+        Loggers.SERVER.info("OTEL_PLUGIN: Creating child span " + spanName + " under parent " + parentSpan + " with start time " + startTime);
+        return this.spanMap.computeIfAbsent(spanName, key -> this.tracer.spanBuilder(spanName).setParent(Context.current().with(parentSpan)).setStartTimestamp(startTime, TimeUnit.MILLISECONDS).startSpan());
     }
 
     public void removeSpanFromMap(String buildId) {
@@ -91,5 +90,11 @@ public class OTELHelper {
     public void addAttributeToSpan(Span span, String attributeName, Object attributeValue) {
         Loggers.SERVER.debug("OTEL_PLUGIN: Adding attribute to span " + attributeName + "=" + attributeValue);
         span.setAttribute(attributeName, attributeValue.toString());
+    }
+
+    public void cleanSpansFromMap(List<String> keys) {
+        for (String key: keys) {
+            this.spanMap.remove(key);
+        }
     }
 }

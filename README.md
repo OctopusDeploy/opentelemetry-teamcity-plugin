@@ -4,7 +4,7 @@ A TeamCity plugin that sends build trace data to an OpenTelemetry collector endp
 
 This plugin helps you visualize how you can better optimize your TeamCity builds and their dependency trees, by exporting TeamCity build pipeline data automatically to existing OpenTelemetry collector such as [Honeycomb](https://www.honeycomb.io/), [Zipkin](https://zipkin.io/) or [Jaeger](https://www.jaegertracing.io).
 
-![trace_image](./trace_image.png)
+![trace_image.png](trace_image.png)
 
 ## What is OpenTelemetry
 

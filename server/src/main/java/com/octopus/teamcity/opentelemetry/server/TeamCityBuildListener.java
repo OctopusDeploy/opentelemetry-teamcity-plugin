@@ -258,7 +258,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         Loggers.SERVER.info("OTEL_PLUGIN: Retrieving build artifact attributes for build " + buildName);
         BuildArtifacts buildArtifacts = build.getArtifacts(BuildArtifactsViewMode.VIEW_ALL);
         buildArtifacts.iterateArtifacts(artifact -> {
-            span.setAttribute(artifact.getName() + PluginConstants.ATTRIBUTE_ARTIFACT_SIZE, artifact.getSize());
+            span.setAttribute(PluginConstants.ATTRIBUTE_ARTIFACT_SIZE + artifact.getName(), artifact.getSize());
             Loggers.SERVER.debug("OTEL_PLUGIN: Build artifact attribute " + artifact.getName() + "=" + artifact.getSize());
             return BuildArtifacts.BuildArtifactsProcessor.Continuation.CONTINUE;
         });

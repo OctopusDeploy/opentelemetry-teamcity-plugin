@@ -3,7 +3,7 @@
                  xsi:noNamespaceSchemaLocation="urn:shemas-jetbrains-com:teamcity-plugin-v1-xml">
     <info>
         <name>Octopus.TeamCity.Opentelemetry</name>
-        <display-name>Octopus Deploy Opentelemetry Plugin</display-name>
+        <display-name>Octopus Deploy Opentelemetry</display-name>
         <version>@version@</version>
         <description>Tool to view build trace data using opentelemetry collector endpoints</description>
 

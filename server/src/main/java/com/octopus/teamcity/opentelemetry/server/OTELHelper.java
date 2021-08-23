@@ -19,15 +19,15 @@ import io.opentelemetry.sdk.trace.export.SpanExporter;
 import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
 import jetbrains.buildServer.log.Loggers;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 public class OTELHelper {
 
     private final OpenTelemetry openTelemetry;
     private final Tracer tracer;
-    private final HashMap<String, Span> spanMap;
+    private final ConcurrentHashMap<String, Span> spanMap;
 
     public OTELHelper(Map<String, String> headers, String exporterEndpoint) {
         SpanProcessor spanProcessor = buildSpanProcessor(headers, exporterEndpoint);
@@ -44,7 +44,7 @@ public class OTELHelper {
                 .buildAndRegisterGlobal();
         Loggers.SERVER.info("OTEL_PLUGIN: OTEL_PLUGIN: OpenTelemetry plugin started.");
         this.tracer = this.openTelemetry.getTracer(PluginConstants.TRACER_INSTRUMENTATION_NAME);
-        this.spanMap = new HashMap<>();
+        this.spanMap = new ConcurrentHashMap<>();
     }
 
     private SpanProcessor buildSpanProcessor(Map<String, String> headers, String exporterEndpoint) {
@@ -67,23 +67,20 @@ public class OTELHelper {
         return this.spanMap.computeIfAbsent(buildId, key -> this.tracer.spanBuilder(buildId).startSpan());
     }
 
-    public Span createSpan(String buildId, Span parentSpan) {
-        return this.spanMap.computeIfAbsent(buildId, key -> this.tracer.spanBuilder(buildId).setParent(Context.current().with(parentSpan)).startSpan());
-    }
-
-    public Span createChildSpan(Span parentSpan, String spanName, long startTime) {
+    public Span createSpan(String spanName, Span parentSpan) {
         Loggers.SERVER.info("OTEL_PLUGIN: Creating child span " + spanName + " under parent " + parentSpan);
-        return this.tracer.spanBuilder(spanName)
-                .setParent(Context.current().with(parentSpan))
-                .setStartTimestamp(startTime, TimeUnit.MILLISECONDS)
-                .startSpan();
+        return this.spanMap.computeIfAbsent(spanName, key -> this.tracer.spanBuilder(spanName).setParent(Context.current().with(parentSpan)).startSpan());
     }
 
-    public void removeSpanFromMap(String buildId) {
+    public Span createTransientSpan(String spanName, Span parentSpan, long startTime) {
+        return this.tracer.spanBuilder(spanName).setParent(Context.current().with(parentSpan)).setStartTimestamp(startTime, TimeUnit.MILLISECONDS).startSpan();
+    }
+
+    public void removeSpan(String buildId) {
         this.spanMap.remove(buildId);
     }
 
-    public Span getSpanFromMap(String buildId) {
+    public Span getSpan(String buildId) {
         return this.spanMap.get(buildId);
     }
 

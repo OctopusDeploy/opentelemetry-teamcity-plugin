@@ -26,12 +26,11 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class TeamCityBuildListenerTest {
 
-    OTELHelper otelHelper;
-    TeamCityBuildListener buildListener;
-    @Mock EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher;
+    private OTELHelper otelHelper;
+    private TeamCityBuildListener buildListener;
 
     @BeforeEach
-    void setUp() {
+    void setUp(@Mock EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher) {
         final String ENDPOINT = "https://otel.endpoint.com";
         final Map<String, String> HEADERS = new HashMap<>() {{
             put("testHeader1", "testHeaderValue1");
@@ -39,7 +38,7 @@ class TeamCityBuildListenerTest {
         }};
         GlobalOpenTelemetry.resetForTest();
         this.otelHelper = new OTELHelper(HEADERS, ENDPOINT);
-        this.buildListener = new TeamCityBuildListener(this.buildServerListenerEventDispatcher, otelHelper);
+        this.buildListener = new TeamCityBuildListener(buildServerListenerEventDispatcher, otelHelper);
     }
 
     @Test
@@ -52,12 +51,15 @@ class TeamCityBuildListenerTest {
         assertTrue(this.otelHelper.isReady());
     }
 
-//    @Test
-//    void buildWithNoParent() {
-//        SRunningBuild build = mock(SRunningBuild.class, RETURNS_DEEP_STUBS);
-//        // Stubbing this method to return the build if there is no parent, this is the behaviour of TeamCity
-//        when(build.getBuildPromotion().findTops()).thenReturn(new BuildPromotion[]{build.getBuildPromotion()});
-//        this.buildListener.buildStarted(build);
-//        Span span = this.otelHelper.getSpan(String.valueOf(build.getBuildId()));
-//    }
+    @Test
+    void buildWithNoParent() {
+        SRunningBuild build = mock(SRunningBuild.class, RETURNS_DEEP_STUBS);
+        // Stubbing this method to return the build if there is no parent, this is the behaviour of TeamCity
+        BuildPromotion[] buildPromotions = new BuildPromotion[]{build.getBuildPromotion()};
+        when(build.getBuildPromotion().findTops()).thenReturn(buildPromotions);
+        this.buildListener.buildStarted(build);
+        Span builtSpan = this.otelHelper.getSpan(String.valueOf(build.getBuildId()));
+        Span expectedSpan = this.otelHelper.createSpan(String.valueOf(build.getBuildId()), builtSpan);
+        assertEquals(expectedSpan, builtSpan);
+    }
 }

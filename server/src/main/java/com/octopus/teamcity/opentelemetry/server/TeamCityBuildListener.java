@@ -33,6 +33,12 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         this.otelHelper = new OTELHelper(getExporterHeaders(), ENDPOINT);
     }
 
+    public TeamCityBuildListener(EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher, OTELHelper otelHelper) {
+        buildServerListenerEventDispatcher.addListener(this);
+        Loggers.SERVER.info("OTEL_PLUGIN: OTEL_PLUGIN: BuildListener registered.");
+        this.otelHelper = otelHelper;
+    }
+
     private Map<String, String> getExporterHeaders() throws IllegalStateException {
         Properties internalProperties = TeamCityProperties.getAllProperties().first;
         Loggers.SERVER.debug("OTEL_PLUGIN: TeamCity internal properties: " + internalProperties);
@@ -93,7 +99,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         return build.getBuildType() != null ? build.getBuildType().getName() : null;
     }
 
-    private String getParentBuild(SRunningBuild build) {
+    public String getParentBuild(SRunningBuild build) {
         BuildPromotion[] topParentBuild = build.getBuildPromotion().findTops();
         BuildPromotion buildPromotion = topParentBuild[0];
         Loggers.SERVER.debug("OTEL_PLUGIN: Top Build Parent: " + buildPromotion);

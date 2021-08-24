@@ -12,8 +12,8 @@ public class LogMasker {
     }
 
     public static String mask(String message) {
-        final String API_KEY_REGEX = "([a-z0-9]{31})";
-        final Pattern apikeyPattern = Pattern.compile(API_KEY_REGEX);
+        final String HONEYCOMB_API_KEY_REGEX = "([a-z0-9]{31})";
+        final Pattern apikeyPattern = Pattern.compile(HONEYCOMB_API_KEY_REGEX);
         StringBuilder buffer = new StringBuilder();
 
         Matcher matcher = apikeyPattern.matcher(message);

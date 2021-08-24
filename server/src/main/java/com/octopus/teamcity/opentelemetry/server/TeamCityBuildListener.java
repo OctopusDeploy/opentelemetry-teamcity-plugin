@@ -99,7 +99,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         return build.getBuildType() != null ? build.getBuildType().getName() : null;
     }
 
-    public String getParentBuild(SRunningBuild build) {
+    private String getParentBuild(SRunningBuild build) {
         BuildPromotion[] topParentBuild = build.getBuildPromotion().findTops();
         BuildPromotion buildPromotion = topParentBuild[0];
         Loggers.SERVER.debug("OTEL_PLUGIN: Top Build Parent: " + buildPromotion);

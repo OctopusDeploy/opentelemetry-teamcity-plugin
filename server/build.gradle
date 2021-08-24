@@ -20,8 +20,6 @@ dependencies {
     implementation('io.opentelemetry:opentelemetry-exporter-otlp:1.4.1')
     implementation('io.opentelemetry:opentelemetry-semconv:1.4.1-alpha')
     implementation 'io.grpc:grpc-netty-shaded:1.39.0'
-    implementation 'io.grpc:grpc-protobuf:1.39.0'
-    implementation 'io.grpc:grpc-stub:1.39.0'
 
     provided 'org.jetbrains.teamcity:server-api'
 }

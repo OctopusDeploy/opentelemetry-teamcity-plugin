@@ -2,21 +2,16 @@ package com.octopus.teamcity.opentelemetry.server;
 
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.trace.Span;
-import jetbrains.buildServer.Build;
 import jetbrains.buildServer.serverSide.BuildPromotion;
 import jetbrains.buildServer.serverSide.BuildServerListener;
 import jetbrains.buildServer.serverSide.SRunningBuild;
-import jetbrains.buildServer.serverSide.impl.BuildPromotionImpl;
-import jetbrains.buildServer.serverSide.impl.DummyBuildPromotion;
 import jetbrains.buildServer.util.EventDispatcher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.sql.Array;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -52,7 +47,7 @@ class TeamCityBuildListenerTest {
     }
 
     @Test
-    void buildWithNoParent() {
+    void buildStartedWithNoParent() {
         SRunningBuild build = mock(SRunningBuild.class, RETURNS_DEEP_STUBS);
         // Stubbing this method to return the build if there is no parent, this is the behaviour of TeamCity
         BuildPromotion[] buildPromotions = new BuildPromotion[]{build.getBuildPromotion()};
@@ -61,5 +56,30 @@ class TeamCityBuildListenerTest {
         Span builtSpan = this.otelHelper.getSpan(String.valueOf(build.getBuildId()));
         Span expectedSpan = this.otelHelper.createSpan(String.valueOf(build.getBuildId()), builtSpan);
         assertEquals(expectedSpan, builtSpan);
+    }
+
+    @Test
+    void buildStartedWithParent() {
+        SRunningBuild build = mock(SRunningBuild.class, RETURNS_DEEP_STUBS);
+        SRunningBuild parentBuild = mock(SRunningBuild.class, RETURNS_DEEP_STUBS);
+        // Stubbing this method to return the build if there is no parent, this is the behaviour of TeamCity
+        BuildPromotion[] buildPromotions = new BuildPromotion[]{build.getBuildPromotion()};
+        when(build.getBuildPromotion().findTops()).thenReturn(buildPromotions);
+        this.buildListener.buildStarted(build);
+        Span parentSpan = this.otelHelper.getParentSpan(String.valueOf(parentBuild.getBuildId()));
+        Span builtSpan = this.otelHelper.getSpan(String.valueOf(build.getBuildId()));
+        Span expectedSpan = this.otelHelper.createSpan(String.valueOf(build.getBuildId()), parentSpan);
+        assertEquals(expectedSpan, builtSpan);
+    }
+
+    @Test
+    void buildFinishedOrInterrupted() {
+        SRunningBuild build = mock(SRunningBuild.class, RETURNS_DEEP_STUBS);
+        // Stubbing this method to return the build if there is no parent, this is the behaviour of TeamCity
+        BuildPromotion[] buildPromotions = new BuildPromotion[]{build.getBuildPromotion()};
+        when(build.getBuildPromotion().findTops()).thenReturn(buildPromotions);
+        this.buildListener.buildStarted(build);
+        this.buildListener.buildFinished(build);
+        assertNull(this.otelHelper.getSpan(String.valueOf(build.getBuildId())));
     }
 }

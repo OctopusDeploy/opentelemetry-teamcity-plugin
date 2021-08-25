@@ -50,9 +50,12 @@ subprojects {
 
 apply plugin: "distribution"
 
+distZip {
+    archiveName = "Octopus.TeamCity.OpenTelemetry." + rootProject.version + ".zip"
+}
+
 distributions {
     main {
-        distributionBaseName = "Octopus.TeamCity.OpenTelemetry." + rootProject.version
         contents {
             from file("teamcity-plugin.xml"), {
                 filter(org.apache.tools.ant.filters.ReplaceTokens, tokens:[version: rootProject.version])

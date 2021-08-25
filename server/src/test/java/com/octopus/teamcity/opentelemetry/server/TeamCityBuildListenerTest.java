@@ -93,6 +93,7 @@ class TeamCityBuildListenerTest {
         BuildPromotion[] buildPromotions = new BuildPromotion[]{build.getBuildPromotion()};
         when(build.getBuildPromotion().findTops()).thenReturn(buildPromotions);
         this.buildListener.buildStarted(build);
+        assertNotNull(this.otelHelper.getSpan(String.valueOf(build.getBuildId())));
 
         // Act
         this.buildListener.buildFinished(build);

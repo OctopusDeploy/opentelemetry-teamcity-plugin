@@ -65,9 +65,9 @@ class OTELHelperTest {
         // Arrange
         SRunningBuild build = mock(SRunningBuild.class, RETURNS_DEEP_STUBS);
         Span parentSpan = createParentSpanForTest(build);
+        Span expectedSpan = this.otelHelper.createSpan(String.valueOf(build.getBuildId()), parentSpan);
 
         // Act
-        Span expectedSpan = this.otelHelper.createSpan(String.valueOf(build.getBuildId()), parentSpan);
         Span actualSpan = this.otelHelper.getSpan(String.valueOf(build.getBuildId()));
 
         // Assert
@@ -86,11 +86,11 @@ class OTELHelperTest {
         String buildId = String.valueOf(build.getBuildId());
 
         // Act
-        Span expectedSpan = this.otelHelper.createTransientSpan(buildId, parentSpan, new Date().getTime());
+        Span actualSpan = this.otelHelper.createTransientSpan(buildId, parentSpan, new Date().getTime());
 
         // Assert
-        assertNotNull(expectedSpan);
-        assertNotNull(String.valueOf(parentBuild.getBuildId()));
+        assertNotNull(actualSpan);
+        assertNotNull(this.otelHelper.getSpan(String.valueOf(parentBuild.getBuildId())));
         assertNull(this.otelHelper.getSpan(buildId));
     }
 
@@ -124,7 +124,7 @@ class OTELHelperTest {
 
     @Test
     void getSpanShouldNOTReturnSpanWhenItDoesNotExist(@Mock SRunningBuild build) {
-        // Assert
+        // Act & Assert
         assertNull(this.otelHelper.getSpan(String.valueOf(build.getBuildId())));
     }
 

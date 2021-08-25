@@ -16,27 +16,19 @@ class LogMaskerTest {
         int APIKEY_LENGTH = 31;
         String generatedString = RandomStringUtils.randomAlphanumeric(APIKEY_LENGTH).toLowerCase(Locale.ROOT);
         assertFalse(LogMasker.mask(generatedString).contains(generatedString));
-        assertEquals(LogMasker.API_KEY_REPLACEMENT_REGEX, LogMasker.mask(generatedString));
-    }
-
-    @Test
-    void UpperCaseApiKeyNotMasked() {
-        int APIKEY_LENGTH = 31;
-        String generatedString = RandomStringUtils.randomAlphanumeric(APIKEY_LENGTH).toUpperCase(Locale.ROOT);
-        assertTrue(LogMasker.mask(generatedString).contains(generatedString));
-        assertNotEquals(LogMasker.API_KEY_REPLACEMENT_REGEX, LogMasker.mask(generatedString));
+        assertTrue(LogMasker.mask(generatedString).contains(LogMasker.API_KEY_REPLACEMENT_REGEX));
     }
 
     @ParameterizedTest
-    @ValueSource(ints = { 31, 40, 70, 90, 100 })
-    void ApiKeyMaskedForLowerCaseStringLengthGreaterThan31(int apiKeyLength) {
+    @ValueSource(ints = { 31, 32 })
+    void ApiKeyMaskedForLowerCaseStringLengthGreaterThanOrEq31(int apiKeyLength) {
         String generatedString = RandomStringUtils.randomAlphanumeric(apiKeyLength).toLowerCase(Locale.ROOT);
         assertFalse(LogMasker.mask(generatedString).contains(generatedString));
         assertTrue(LogMasker.mask(generatedString).contains(LogMasker.API_KEY_REPLACEMENT_REGEX));
     }
 
     @ParameterizedTest
-    @ValueSource(ints = { 1, 10, 20, 25, 30 })
+    @ValueSource(ints = { 29, 30 })
     void ApiKeyNotMaskedForLowerCaseStringLengthLessThan31(int apiKeyLength) {
         String generatedString = RandomStringUtils.randomAlphanumeric(apiKeyLength).toLowerCase(Locale.ROOT);
         assertTrue(LogMasker.mask(generatedString).contains(generatedString));
@@ -44,15 +36,15 @@ class LogMaskerTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = { 10, 20, 70, 90, 150 })
-    void ApiKeyNotMaskedForUpperCaseStringLengthNotEqualTo31(int apiKeyLength) {
+    @ValueSource(ints = { 30, 31, 32 })
+    void ApiKeyNotMaskedForUpperCaseString(int apiKeyLength) {
         String generatedString = RandomStringUtils.randomAlphanumeric(apiKeyLength).toUpperCase(Locale.ROOT);
         assertTrue(LogMasker.mask(generatedString).contains(generatedString));
         assertNotEquals(LogMasker.API_KEY_REPLACEMENT_REGEX, LogMasker.mask(generatedString));
     }
 
     @ParameterizedTest
-    @ValueSource(chars = { '%', '$', '%', '#', '@', '!', '\n', ' ' })
+    @ValueSource(chars = { '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '\n', '-', '=', '+', '_', '{', '}', '~', '<', '>', '?', '/', ':', ';', '[', ']', '|' })
     void ApiKeyNotMaskedForStringWithSpecialChars(char specialChar) {
         int APIKEY_LENGTH_FIRST_SPLIT = 15;
         int APIKEY_LENGTH_SECOND_SPLIT = 16;
@@ -62,7 +54,7 @@ class LogMaskerTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = { 10, 20, 70, 90, 150 })
+    @ValueSource(ints = { 0, 1, 2})
     void ApiKeyMaskedWhenContainedInStringBlock(int blockSetLength) {
         int APIKEY_LENGTH = 31;
         String generatedApiKey = RandomStringUtils.randomAlphanumeric(APIKEY_LENGTH).toLowerCase(Locale.ROOT);

@@ -47,7 +47,7 @@ class TeamCityBuildListenerTest {
     }
 
     @Test
-    void buildStartedTriggeredWithNoParentWhenShouldHaveBuildSpanAvailableInGetSpan() {
+    void buildStartedTriggeredWithNoParentShouldCreateABuildSpanAndBeAvailableInGetSpan() {
         // Arrange
         SRunningBuild build = mock(SRunningBuild.class, RETURNS_DEEP_STUBS);
         // Stubbing this method to return the build if there is no parent, as this is the behaviour of TeamCity
@@ -65,7 +65,7 @@ class TeamCityBuildListenerTest {
     }
 
     @Test
-    void buildStartedTriggeredWithParentShouldHaveBuildSpanAndParentSpanAvailableInGetSpan() {
+    void buildStartedTriggeredWithAParentShouldCreateABuildSpanAndBeAvailableInGetSpan() {
         // Arrange
         SRunningBuild build = mock(SRunningBuild.class, RETURNS_DEEP_STUBS);
         SRunningBuild parentBuild = mock(SRunningBuild.class, RETURNS_DEEP_STUBS);
@@ -86,7 +86,7 @@ class TeamCityBuildListenerTest {
     }
 
     @Test
-    void buildFinishedOrInterruptedTriggeredShouldRemoveSpanAndNotBeAvailableInGetSpan() {
+    void buildFinishedOrInterruptedTriggeredSpanNotAvailableInGetSpan() {
         // Arrange
         SRunningBuild build = mock(SRunningBuild.class, RETURNS_DEEP_STUBS);
         // Stubbing this method to return the build if there is no parent, this is the behaviour of TeamCity

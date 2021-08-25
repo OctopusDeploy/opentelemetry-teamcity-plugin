@@ -30,7 +30,6 @@ public class OTELHelper {
     private final ConcurrentHashMap<String, Span> spanMap;
 
     public OTELHelper(Map<String, String> headers, String exporterEndpoint) {
-
         SpanProcessor spanProcessor = buildSpanProcessor(headers, exporterEndpoint);
 
         Resource serviceNameResource = Resource

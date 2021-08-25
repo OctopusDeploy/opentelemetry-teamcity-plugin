@@ -100,11 +100,11 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     }
 
     private String getParentBuild(SRunningBuild build) {
-        BuildPromotion[] topParentBuild = build.getBuildPromotion().findTops();
-        BuildPromotion buildPromotion = topParentBuild[0];
-        Loggers.SERVER.debug("OTEL_PLUGIN: Top Build Parent: " + buildPromotion);
-        Loggers.SERVER.debug("OTEL_PLUGIN: Top Build Parent Id: " + buildPromotion.getId());
-        return String.valueOf(buildPromotion.getId());
+        BuildPromotion[] parentBuilds = build.getBuildPromotion().findTops();
+        BuildPromotion parentBuildPromotion = parentBuilds[0];
+        Loggers.SERVER.debug("OTEL_PLUGIN: Top Build Parent: " + parentBuildPromotion);
+        Loggers.SERVER.debug("OTEL_PLUGIN: Top Build Parent Id: " + parentBuildPromotion.getId());
+        return String.valueOf(parentBuildPromotion.getId());
     }
 
     private void setSpanBuildAttributes(SRunningBuild build, String buildName, Span span) {

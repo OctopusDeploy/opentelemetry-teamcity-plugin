@@ -46,9 +46,6 @@ subprojects {
         maven { url "https://packages.jetbrains.team/maven/p/teamcity-rest-client/teamcity-rest-client" }
         maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
     }
-
-    dependencies {
-    }
 }
 
 apply plugin: "distribution"
@@ -56,7 +53,6 @@ apply plugin: "distribution"
 distributions {
     main {
         distributionBaseName = "Octopus.TeamCity.OpenTelemetry." + rootProject.version
-        version = ''
         contents {
             from file("teamcity-plugin.xml"), {
                 filter(org.apache.tools.ant.filters.ReplaceTokens, tokens:[version: rootProject.version])

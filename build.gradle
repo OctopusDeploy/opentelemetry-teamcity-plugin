@@ -1,3 +1,5 @@
+import org.apache.tools.ant.filters.ReplaceTokens
+
 plugins {
     id 'java'
     id 'io.spring.dependency-management' version '1.0.11.RELEASE'
@@ -32,7 +34,7 @@ subprojects {
     }
 
     task sourcesJar(type: Jar, dependsOn: classes) {
-        classifier = 'sources'
+        archiveClassifier.set("sources")
         from sourceSets.main.allSource
     }
 
@@ -51,14 +53,14 @@ subprojects {
 apply plugin: "distribution"
 
 distZip {
-    archiveName = "Octopus.TeamCity.OpenTelemetry." + rootProject.version + ".zip"
+    archiveFileName = "Octopus.TeamCity.OpenTelemetry." + rootProject.version + ".zip"
 }
 
 distributions {
-    main {
+    all {
         contents {
             from file("teamcity-plugin.xml"), {
-                filter(org.apache.tools.ant.filters.ReplaceTokens, tokens:[version: rootProject.version])
+                filter ReplaceTokens, tokens: [version: rootProject.version]
             }
             into('server/') {
                 from tasks.findByPath(":server:installDist")

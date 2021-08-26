@@ -1,11 +1,9 @@
 jar {
-    archiveBaseName = 'octopus-teamcity-opentelemetry-common'
-    manifest {
-        attributes(
-                'Specification-Title': archiveBaseName,
-                'Specification-Version': project.version,
-                'Implementation-Title': archiveBaseName,
-                'Implementation-Version': project.version
-        )
-    }
+    archiveBaseName.set('octopus-teamcity-opentelemetry-common')
+    manifest.attributes([
+         'Specification-Title': archiveBaseName,
+         'Specification-Version': project.version,
+         'Implementation-Title': archiveBaseName,
+         'Implementation-Version': project.version
+    ])
 }

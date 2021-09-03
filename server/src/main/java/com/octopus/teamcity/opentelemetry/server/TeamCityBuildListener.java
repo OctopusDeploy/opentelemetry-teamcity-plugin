@@ -15,6 +15,7 @@ import jetbrains.buildServer.serverSide.buildLog.LogMessage;
 import jetbrains.buildServer.serverSide.buildLog.LogMessageFilter;
 import jetbrains.buildServer.util.EventDispatcher;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -27,6 +28,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     private final OTELHelper otelHelper;
     private static final String ENDPOINT = TeamCityProperties.getProperty(PluginConstants.PROPERTY_KEY_ENDPOINT);
 
+    @Autowired
     public TeamCityBuildListener(EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher) {
         buildServerListenerEventDispatcher.addListener(this);
         Loggers.SERVER.info("OTEL_PLUGIN: OTEL_PLUGIN: BuildListener registered.");
@@ -73,7 +75,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
             try (Scope ignored = parentSpan.makeCurrent()) {
                 setSpanBuildAttributes(build, buildName, span);
                 span.addEvent(PluginConstants.EVENT_STARTED);
-                Loggers.SERVER.info(PluginConstants.EVENT_STARTED + " event added to span for build " + buildName);
+                Loggers.SERVER.info("OTEL_PLUGIN: " + PluginConstants.EVENT_STARTED + " event added to span for build " + buildName);
             } catch (Exception e) {
                 Loggers.SERVER.error("OTEL_PLUGIN: Exception in Build Start caused by: " + e + e.getCause() +
                         ", with message: " + e.getMessage() +
@@ -166,7 +168,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_PROBLEMS_COUNT, buildStatistics.getCompilationErrorsCount());
 
                 span.addEvent(PluginConstants.EVENT_FINISHED);
-                Loggers.SERVER.debug(PluginConstants.EVENT_FINISHED + " event added to span for build " + buildName);
+                Loggers.SERVER.debug("OTEL_PLUGIN: " + PluginConstants.EVENT_FINISHED + " event added to span for build " + buildName);
             } catch (Exception e) {
                 Loggers.SERVER.error("OTEL_PLUGIN: Exception in Build Finish caused by: " + e + e.getCause() +
                         ", with message: " + e.getMessage() +

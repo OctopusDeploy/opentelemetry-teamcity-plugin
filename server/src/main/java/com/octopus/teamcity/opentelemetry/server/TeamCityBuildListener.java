@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -26,20 +27,23 @@ import java.util.stream.Collectors;
 public class TeamCityBuildListener extends BuildServerAdapter {
 
     private final OTELHelper otelHelper;
+    private final ConcurrentHashMap<String, Long> buildTotalArtifactSize;
     private static final String ENDPOINT = TeamCityProperties.getProperty(PluginConstants.PROPERTY_KEY_ENDPOINT);
 
     @Autowired
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public TeamCityBuildListener(EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher) {
         buildServerListenerEventDispatcher.addListener(this);
-        Loggers.SERVER.info("OTEL_PLUGIN: OTEL_PLUGIN: BuildListener registered.");
+        Loggers.SERVER.info("OTEL_PLUGIN: BuildListener registered.");
         this.otelHelper = new OTELHelper(getExporterHeaders(), ENDPOINT);
+        this.buildTotalArtifactSize = new ConcurrentHashMap<>();
     }
 
     public TeamCityBuildListener(EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher, OTELHelper otelHelper) {
         buildServerListenerEventDispatcher.addListener(this);
-        Loggers.SERVER.info("OTEL_PLUGIN: OTEL_PLUGIN: BuildListener registered.");
+        Loggers.SERVER.info("OTEL_PLUGIN: BuildListener registered.");
         this.otelHelper = otelHelper;
+        this.buildTotalArtifactSize = new ConcurrentHashMap<>();
     }
 
     private Map<String, String> getExporterHeaders() throws IllegalStateException {
@@ -265,11 +269,14 @@ public class TeamCityBuildListener extends BuildServerAdapter {
 
     private void setArtifactAttributes(SRunningBuild build, String buildName, Span span) {
         Loggers.SERVER.info("OTEL_PLUGIN: Retrieving build artifact attributes for build " + buildName);
-        BuildArtifacts buildArtifacts = build.getArtifacts(BuildArtifactsViewMode.VIEW_ALL);
+        BuildArtifacts buildArtifacts = build.getArtifacts(BuildArtifactsViewMode.VIEW_DEFAULT);
         buildArtifacts.iterateArtifacts(artifact -> {
-            span.setAttribute(PluginConstants.ATTRIBUTE_ARTIFACT_SIZE + artifact.getName(), artifact.getSize());
-            Loggers.SERVER.debug("OTEL_PLUGIN: Build artifact attribute " + artifact.getName() + "=" + artifact.getSize());
+            Loggers.SERVER.debug("OTEL_PLUGIN: Build artifact size attribute " + artifact.getName() + "=" + artifact.getSize());
+            this.buildTotalArtifactSize.computeIfAbsent(buildName, key -> artifact.getSize());
+            this.buildTotalArtifactSize.computeIfPresent(buildName, (key, value) -> value + artifact.getSize());
             return BuildArtifacts.BuildArtifactsProcessor.Continuation.CONTINUE;
         });
+        Loggers.SERVER.debug("OTEL_PLUGIN: Build total artifact size attribute " + PluginConstants.ATTRIBUTE_TOTAL_ARTIFACT_SIZE + "=" + this.buildTotalArtifactSize.get(buildName));
+        span.setAttribute(PluginConstants.ATTRIBUTE_TOTAL_ARTIFACT_SIZE, this.buildTotalArtifactSize.get(buildName));
     }
 }

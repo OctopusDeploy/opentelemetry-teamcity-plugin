@@ -162,7 +162,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
 
         if(this.otelHelper.getSpan(buildId) != null) {
             Span span = this.otelHelper.getSpan(buildId);
-            Loggers.SERVER.debug("OTEL_PLUGIN: Tracer initialized and span found for " + buildName);
+            Loggers.SERVER.debug("OTEL_PLUGIN: Build finished and span found for " + buildName);
             try (Scope ignored = span.makeCurrent()){
                 createQueuedEventsSpans(build, buildName, span);
                 createBuildStepSpans(build, buildName, span);

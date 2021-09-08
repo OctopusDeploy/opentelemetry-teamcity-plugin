@@ -166,7 +166,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
             try (Scope ignored = span.makeCurrent()){
                 createQueuedEventsSpans(build, buildName, span);
                 createBuildStepSpans(build, buildName, span);
-                setArtifactAttributes(build, buildName, span);
+                setArtifactAttributes(build, span, span.getSpanContext().getSpanId());
 
                 this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_SUCCESS_STATUS, build.getBuildStatus().isSuccessful());
                 this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_FAILED_TEST_COUNT, buildStatistics.getFailedTestCount());
@@ -267,16 +267,17 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         return buildLogs;
     }
 
-    private void setArtifactAttributes(SRunningBuild build, String buildName, Span span) {
-        Loggers.SERVER.info("OTEL_PLUGIN: Retrieving build artifact attributes for build " + buildName);
+    private void setArtifactAttributes(SRunningBuild build, Span span, String spanId) {
+        Loggers.SERVER.info("OTEL_PLUGIN: Retrieving build artifact attributes for build " + getBuildName(build));
         BuildArtifacts buildArtifacts = build.getArtifacts(BuildArtifactsViewMode.VIEW_DEFAULT);
         buildArtifacts.iterateArtifacts(artifact -> {
             Loggers.SERVER.debug("OTEL_PLUGIN: Build artifact size attribute " + artifact.getName() + "=" + artifact.getSize());
-            this.buildTotalArtifactSize.computeIfAbsent(buildName, key -> artifact.getSize());
-            this.buildTotalArtifactSize.computeIfPresent(buildName, (key, value) -> value + artifact.getSize());
+            this.buildTotalArtifactSize.computeIfAbsent(spanId, key -> artifact.getSize());
+            this.buildTotalArtifactSize.computeIfPresent(spanId, (key, value) -> value + artifact.getSize());
             return BuildArtifacts.BuildArtifactsProcessor.Continuation.CONTINUE;
         });
-        Loggers.SERVER.debug("OTEL_PLUGIN: Build total artifact size attribute " + PluginConstants.ATTRIBUTE_TOTAL_ARTIFACT_SIZE + "=" + this.buildTotalArtifactSize.get(buildName));
-        span.setAttribute(PluginConstants.ATTRIBUTE_TOTAL_ARTIFACT_SIZE, this.buildTotalArtifactSize.get(buildName));
+        Loggers.SERVER.debug("OTEL_PLUGIN: Build total artifact size attribute " + PluginConstants.ATTRIBUTE_TOTAL_ARTIFACT_SIZE + "=" + this.buildTotalArtifactSize.get(spanId));
+        span.setAttribute(PluginConstants.ATTRIBUTE_TOTAL_ARTIFACT_SIZE, this.buildTotalArtifactSize.get(span.getSpanContext().getSpanId()));
+        this.buildTotalArtifactSize.remove(spanId);
     }
 }

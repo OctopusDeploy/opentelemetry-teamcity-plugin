@@ -19,15 +19,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.math.BigDecimal;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class TeamCityBuildListener extends BuildServerAdapter {
 
     private final OTELHelper otelHelper;
-    private final ConcurrentHashMap<String, Long> buildTotalArtifactSize;
     private static final String ENDPOINT = TeamCityProperties.getProperty(PluginConstants.PROPERTY_KEY_ENDPOINT);
 
     @Autowired
@@ -36,14 +35,12 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         buildServerListenerEventDispatcher.addListener(this);
         Loggers.SERVER.info("OTEL_PLUGIN: BuildListener registered.");
         this.otelHelper = new OTELHelper(getExporterHeaders(), ENDPOINT);
-        this.buildTotalArtifactSize = new ConcurrentHashMap<>();
     }
 
     public TeamCityBuildListener(EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher, OTELHelper otelHelper) {
         buildServerListenerEventDispatcher.addListener(this);
         Loggers.SERVER.info("OTEL_PLUGIN: BuildListener registered.");
         this.otelHelper = otelHelper;
-        this.buildTotalArtifactSize = new ConcurrentHashMap<>();
     }
 
     private Map<String, String> getExporterHeaders() throws IllegalStateException {
@@ -166,7 +163,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
             try (Scope ignored = span.makeCurrent()){
                 createQueuedEventsSpans(build, buildName, span);
                 createBuildStepSpans(build, buildName, span);
-                setArtifactAttributes(build, span, span.getSpanContext().getSpanId());
+                setArtifactAttributes(build, span);
 
                 this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_SUCCESS_STATUS, build.getBuildStatus().isSuccessful());
                 this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_FAILED_TEST_COUNT, buildStatistics.getFailedTestCount());
@@ -267,17 +264,16 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         return buildLogs;
     }
 
-    private void setArtifactAttributes(SRunningBuild build, Span span, String spanId) {
-        Loggers.SERVER.info("OTEL_PLUGIN: Retrieving build artifact attributes for build " + getBuildName(build));
+    private void setArtifactAttributes(SRunningBuild build, Span span) {
+        Loggers.SERVER.debug("OTEL_PLUGIN: Retrieving build artifact attributes for build: " + getBuildName(build) + " with id: " + getBuildId(build));
+        AtomicLong buildTotalArtifactSize = new AtomicLong();
         BuildArtifacts buildArtifacts = build.getArtifacts(BuildArtifactsViewMode.VIEW_DEFAULT);
         buildArtifacts.iterateArtifacts(artifact -> {
             Loggers.SERVER.debug("OTEL_PLUGIN: Build artifact size attribute " + artifact.getName() + "=" + artifact.getSize());
-            this.buildTotalArtifactSize.computeIfAbsent(spanId, key -> artifact.getSize());
-            this.buildTotalArtifactSize.computeIfPresent(spanId, (key, value) -> value + artifact.getSize());
+            buildTotalArtifactSize.getAndAdd(artifact.getSize());
             return BuildArtifacts.BuildArtifactsProcessor.Continuation.CONTINUE;
         });
-        Loggers.SERVER.debug("OTEL_PLUGIN: Build total artifact size attribute " + PluginConstants.ATTRIBUTE_TOTAL_ARTIFACT_SIZE + "=" + this.buildTotalArtifactSize.get(spanId));
-        span.setAttribute(PluginConstants.ATTRIBUTE_TOTAL_ARTIFACT_SIZE, this.buildTotalArtifactSize.get(span.getSpanContext().getSpanId()));
-        this.buildTotalArtifactSize.remove(spanId);
+        Loggers.SERVER.debug("OTEL_PLUGIN: Build total artifact size attribute " + PluginConstants.ATTRIBUTE_TOTAL_ARTIFACT_SIZE + "=" + buildTotalArtifactSize);
+        span.setAttribute(PluginConstants.ATTRIBUTE_TOTAL_ARTIFACT_SIZE, String.valueOf(buildTotalArtifactSize));
     }
 }

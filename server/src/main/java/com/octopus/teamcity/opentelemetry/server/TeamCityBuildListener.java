@@ -161,8 +161,8 @@ public class TeamCityBuildListener extends BuildServerAdapter {
             Span span = this.otelHelper.getSpan(buildId);
             Loggers.SERVER.debug("OTEL_PLUGIN: Build finished and span found for " + buildName);
             try (Scope ignored = span.makeCurrent()){
-                createQueuedEventsSpans(build, buildName, span);
-                createBuildStepSpans(build, buildName, span);
+                createQueuedEventsSpans(build, span);
+                createBuildStepSpans(build, span);
                 setArtifactAttributes(build, span);
 
                 this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_SUCCESS_STATUS, build.getBuildStatus().isSuccessful());
@@ -185,10 +185,10 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         }
     }
 
-    private void createQueuedEventsSpans(SRunningBuild build, String buildName, Span buildSpan) {
+    private void createQueuedEventsSpans(SRunningBuild build, Span buildSpan) {
         long startDateTime = build.getQueuedDate().getTime();
         Map<String, BigDecimal> reportedStatics = build.getStatisticValues();
-        Loggers.SERVER.info("OTEL_PLUGIN: Retrieving queued event spans for build " + buildName);
+        Loggers.SERVER.info("OTEL_PLUGIN: Retrieving queued event spans for build " + getBuildName(build));
 
         for (Map.Entry<String,BigDecimal> entry : reportedStatics.entrySet()) {
             String key = entry.getKey();
@@ -209,9 +209,9 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         }
     }
 
-    private void createBuildStepSpans(SRunningBuild build, String buildName, Span buildSpan) {
+    private void createBuildStepSpans(SRunningBuild build, Span buildSpan) {
         Map<String, Span> blockMessageSpanMap = new HashMap<>();
-        Loggers.SERVER.info("OTEL_PLUGIN: Retrieving build step event spans for build " + buildName);
+        Loggers.SERVER.info("OTEL_PLUGIN: Retrieving build step event spans for build " + getBuildName(build));
         List<LogMessage> buildBlockLogs = getBuildBlockLogs(build);
         for (LogMessage logMessage: buildBlockLogs) {
             BlockLogMessage blockLogMessage = (BlockLogMessage) logMessage;

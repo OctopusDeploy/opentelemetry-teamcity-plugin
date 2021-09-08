@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -32,13 +33,13 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public TeamCityBuildListener(EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher) {
         buildServerListenerEventDispatcher.addListener(this);
-        Loggers.SERVER.info("OTEL_PLUGIN: OTEL_PLUGIN: BuildListener registered.");
+        Loggers.SERVER.info("OTEL_PLUGIN: BuildListener registered.");
         this.otelHelper = new OTELHelper(getExporterHeaders(), ENDPOINT);
     }
 
     public TeamCityBuildListener(EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher, OTELHelper otelHelper) {
         buildServerListenerEventDispatcher.addListener(this);
-        Loggers.SERVER.info("OTEL_PLUGIN: OTEL_PLUGIN: BuildListener registered.");
+        Loggers.SERVER.info("OTEL_PLUGIN: BuildListener registered.");
         this.otelHelper = otelHelper;
     }
 
@@ -158,11 +159,11 @@ public class TeamCityBuildListener extends BuildServerAdapter {
 
         if(this.otelHelper.getSpan(buildId) != null) {
             Span span = this.otelHelper.getSpan(buildId);
-            Loggers.SERVER.debug("OTEL_PLUGIN: Tracer initialized and span found for " + buildName);
+            Loggers.SERVER.debug("OTEL_PLUGIN: Build finished and span found for " + buildName);
             try (Scope ignored = span.makeCurrent()){
                 createQueuedEventsSpans(build, buildName, span);
                 createBuildStepSpans(build, buildName, span);
-                setArtifactAttributes(build, buildName, span);
+                setArtifactAttributes(build, span);
 
                 this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_SUCCESS_STATUS, build.getBuildStatus().isSuccessful());
                 this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_FAILED_TEST_COUNT, buildStatistics.getFailedTestCount());
@@ -263,13 +264,16 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         return buildLogs;
     }
 
-    private void setArtifactAttributes(SRunningBuild build, String buildName, Span span) {
-        Loggers.SERVER.info("OTEL_PLUGIN: Retrieving build artifact attributes for build " + buildName);
-        BuildArtifacts buildArtifacts = build.getArtifacts(BuildArtifactsViewMode.VIEW_ALL);
+    private void setArtifactAttributes(SRunningBuild build, Span span) {
+        Loggers.SERVER.debug("OTEL_PLUGIN: Retrieving build artifact attributes for build: " + getBuildName(build) + " with id: " + getBuildId(build));
+        AtomicLong buildTotalArtifactSize = new AtomicLong();
+        BuildArtifacts buildArtifacts = build.getArtifacts(BuildArtifactsViewMode.VIEW_DEFAULT);
         buildArtifacts.iterateArtifacts(artifact -> {
-            span.setAttribute(PluginConstants.ATTRIBUTE_ARTIFACT_SIZE + artifact.getName(), artifact.getSize());
-            Loggers.SERVER.debug("OTEL_PLUGIN: Build artifact attribute " + artifact.getName() + "=" + artifact.getSize());
+            Loggers.SERVER.debug("OTEL_PLUGIN: Build artifact size attribute " + artifact.getName() + "=" + artifact.getSize());
+            buildTotalArtifactSize.getAndAdd(artifact.getSize());
             return BuildArtifacts.BuildArtifactsProcessor.Continuation.CONTINUE;
         });
+        Loggers.SERVER.debug("OTEL_PLUGIN: Build total artifact size attribute " + PluginConstants.ATTRIBUTE_TOTAL_ARTIFACT_SIZE + "=" + buildTotalArtifactSize);
+        span.setAttribute(PluginConstants.ATTRIBUTE_TOTAL_ARTIFACT_SIZE, String.valueOf(buildTotalArtifactSize));
     }
 }

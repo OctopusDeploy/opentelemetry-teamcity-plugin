@@ -42,7 +42,7 @@ public class OTELHelper {
                 .setTracerProvider(sdkTracerProvider)
                 .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
                 .buildAndRegisterGlobal();
-        Loggers.SERVER.info("OTEL_PLUGIN: OTEL_PLUGIN: OpenTelemetry plugin started.");
+        Loggers.SERVER.info("OTEL_PLUGIN: OpenTelemetry plugin started.");
         this.tracer = this.openTelemetry.getTracer(PluginConstants.TRACER_INSTRUMENTATION_NAME);
         this.spanMap = new ConcurrentHashMap<>();
     }

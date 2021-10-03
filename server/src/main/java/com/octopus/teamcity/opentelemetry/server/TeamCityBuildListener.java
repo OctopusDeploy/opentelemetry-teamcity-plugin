@@ -34,6 +34,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     public TeamCityBuildListener(EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher) {
         buildServerListenerEventDispatcher.addListener(this);
         Loggers.SERVER.info("OTEL_PLUGIN: BuildListener registered.");
+
         this.otelHelper = new OTELHelper(getExporterHeaders(), ENDPOINT);
     }
 
@@ -46,6 +47,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     private Map<String, String> getExporterHeaders() throws IllegalStateException {
         Properties internalProperties = TeamCityProperties.getAllProperties().first;
         Loggers.SERVER.debug("OTEL_PLUGIN: TeamCity internal properties: " + internalProperties);
+        Map<String, String> headers = new HashMap<>();
 
         for (Map.Entry<Object,Object> entry : internalProperties.entrySet()) {
             String propertyName = entry.getKey().toString();
@@ -53,13 +55,13 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 Object propertyValue = entry.getValue();
                 Loggers.SERVER.debug("OTEL_PLUGIN: Internal Property Name: " + propertyName);
                 Loggers.SERVER.debug("OTEL_PLUGIN: Internal Property Value: " + propertyValue);
-
-                return Arrays.stream(propertyValue.toString().split(","))
+                headers = Arrays.stream(propertyValue.toString().split(","))
                         .map(propertyValuesSplit -> propertyValuesSplit.split(":"))
                         .collect(Collectors.toMap(key -> key[0], value -> value[1]));
             }
         }
-        throw new IllegalStateException(PluginConstants.EXCEPTION_ERROR_MESSAGE_HEADERS_UNSET);
+        Loggers.SERVER.debug("OTEL_PLUGIN: exporter headers: " + headers);
+        return headers;
     }
 
     @Override

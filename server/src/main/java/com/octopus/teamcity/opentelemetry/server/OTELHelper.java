@@ -33,7 +33,7 @@ public class OTELHelper {
         SpanProcessor spanProcessor = buildSpanProcessor(headers, exporterEndpoint);
 
         Resource serviceNameResource = Resource
-                .create(Attributes.of(ResourceAttributes.SERVICE_NAME, PluginConstants.SERVICE_NAME));
+                .create(Attributes.of(ResourceAttributes.SERVICE_NAME, PluginConstants.TEAMCITY_SERVICE_NAME));
         SdkTracerProvider sdkTracerProvider = SdkTracerProvider.builder()
                 .setResource(Resource.getDefault().merge(serviceNameResource))
                 .addSpanProcessor(spanProcessor)

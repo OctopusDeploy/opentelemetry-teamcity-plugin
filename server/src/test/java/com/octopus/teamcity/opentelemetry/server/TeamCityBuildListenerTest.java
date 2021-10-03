@@ -37,11 +37,6 @@ class TeamCityBuildListenerTest {
     }
 
     @Test
-    void illegalStateExceptionWhenHeadersEmpty(@Mock EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher) {
-        assertThrows(IllegalStateException.class,() -> new TeamCityBuildListener(buildServerListenerEventDispatcher));
-    }
-
-    @Test
     void buildStartedAndOTELHelperIsReady() {
         assertTrue(this.otelHelper.isReady());
     }

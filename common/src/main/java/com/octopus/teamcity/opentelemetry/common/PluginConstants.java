@@ -4,7 +4,7 @@ public class PluginConstants {
     private PluginConstants() {}
     public static final String TRACER_INSTRUMENTATION_NAME = "octopus.teamcity.opentelemetry";
 
-    public static final String SERVICE_NAME = "TeamCity";
+    public static final String TEAMCITY_SERVICE_NAME = "TeamCity";
 
     public static final String PROPERTY_KEY_ENDPOINT = "octopus.teamcity.opentelemetry.plugin.endpoint";
     public static final String PROPERTY_KEY_HEADERS = "octopus.teamcity.opentelemetry.plugin.headers";

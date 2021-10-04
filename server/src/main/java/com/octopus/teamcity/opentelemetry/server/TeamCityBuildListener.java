@@ -18,7 +18,9 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
@@ -28,6 +30,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
 
     private final OTELHelper otelHelper;
     private static final String ENDPOINT = TeamCityProperties.getProperty(PluginConstants.PROPERTY_KEY_ENDPOINT);
+    private final ConcurrentHashMap<String, Long> checkoutTimeMap;
 
     @Autowired
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
@@ -35,12 +38,14 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         buildServerListenerEventDispatcher.addListener(this);
         Loggers.SERVER.info("OTEL_PLUGIN: BuildListener registered.");
         this.otelHelper = new OTELHelper(getExporterHeaders(), ENDPOINT);
+        this.checkoutTimeMap = new ConcurrentHashMap<>();
     }
 
     public TeamCityBuildListener(EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher, OTELHelper otelHelper) {
         buildServerListenerEventDispatcher.addListener(this);
         Loggers.SERVER.info("OTEL_PLUGIN: BuildListener registered.");
         this.otelHelper = otelHelper;
+        this.checkoutTimeMap = new ConcurrentHashMap<>();
     }
 
     private Map<String, String> getExporterHeaders() throws IllegalStateException {
@@ -98,7 +103,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     }
 
     private String getBuildName(SRunningBuild build) {
-        return build.getBuildType() != null ? build.getBuildType().getName() : null;
+        return build.getBuildType() != null ? build.getBuildType().getName() : "unknown_build_name";
     }
 
     private String getParentBuild(SRunningBuild build) {
@@ -112,7 +117,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     private void setSpanBuildAttributes(SRunningBuild build, Span span) {
         setCommonSpanBuildAttributes(build, span);
         this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_SERVICE_NAME,  build.getBuildTypeExternalId());
-        this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_NAME, getParentBuild(build));
+        this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_NAME, getBuildName(build));
     }
 
     private void setCommonSpanBuildAttributes(SRunningBuild build, Span span) {
@@ -168,6 +173,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_SUCCESS_STATUS, build.getBuildStatus().isSuccessful());
                 this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_FAILED_TEST_COUNT, buildStatistics.getFailedTestCount());
                 this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_PROBLEMS_COUNT, buildStatistics.getCompilationErrorsCount());
+                this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_CHECKOUT_TIME, this.checkoutTimeMap.get(span.getSpanContext().getTraceId()));
 
                 span.addEvent(PluginConstants.EVENT_FINISHED);
                 Loggers.SERVER.debug("OTEL_PLUGIN: " + PluginConstants.EVENT_FINISHED + " event added to span for build " + getBuildName(build));
@@ -256,7 +262,22 @@ public class TeamCityBuildListener extends BuildServerAdapter {
             this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_NAME, blockLogMessage.getText());
         }
         this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_SERVICE_NAME, blockLogMessage.getBlockType());
+        if (blockLogMessage.getBlockType().contains("checkout")) {
+            calculateBuildCheckoutTime(blockLogMessage, span);
+        }
         setCommonSpanBuildAttributes(build, span);
+    }
+
+    private void calculateBuildCheckoutTime(BlockLogMessage blockLogMessage, Span span) {
+        if (blockLogMessage.getBlockDescription() != null && blockLogMessage.getBlockDescription().contains("checkout")) {
+            Date checkoutStartDate = blockLogMessage.getTimestamp();
+            Date checkoutEndDate = blockLogMessage.getFinishDate();
+            if (checkoutEndDate != null) {
+                Duration checkoutDuration = Duration.between(checkoutStartDate.toInstant(), checkoutEndDate.toInstant());
+                long checkoutDifference = Math.abs(checkoutDuration.toSeconds());
+                this.checkoutTimeMap.put(span.getSpanContext().getTraceId(), checkoutDifference);
+            }
+        }
     }
 
     private List<LogMessage> getBuildBlockLogs(SRunningBuild build) {

@@ -75,12 +75,12 @@ public class TeamCityBuildListener extends BuildServerAdapter {
             String parentBuildId = getParentBuild(build);
             Span parentSpan = this.otelHelper.getParentSpan(parentBuildId);
             Span span = this.otelHelper.createSpan(getBuildId(build), parentSpan);
-            Loggers.SERVER.info("OTEL_PLUGIN: Span created for " + getBuildName(build));
+            Loggers.SERVER.debug("OTEL_PLUGIN: Span created for " + getBuildName(build));
 
             try (Scope ignored = parentSpan.makeCurrent()) {
-                setSpanBuildAttributes(build, span);
+                setSpanBuildAttributes(build, span, getBuildName(build), build.getBuildTypeExternalId());
                 span.addEvent(PluginConstants.EVENT_STARTED);
-                Loggers.SERVER.info("OTEL_PLUGIN: " + PluginConstants.EVENT_STARTED + " event added to span for build " + getBuildName(build));
+                Loggers.SERVER.debug("OTEL_PLUGIN: " + PluginConstants.EVENT_STARTED + " event added to span for build " + getBuildName(build));
             } catch (Exception e) {
                 Loggers.SERVER.error("OTEL_PLUGIN: Exception in Build Start caused by: " + e + e.getCause() +
                         ", with message: " + e.getMessage() +
@@ -114,13 +114,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         return String.valueOf(parentBuildPromotion.getId());
     }
 
-    private void setSpanBuildAttributes(SRunningBuild build, Span span) {
-        setCommonSpanBuildAttributes(build, span);
-        this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_SERVICE_NAME,  build.getBuildTypeExternalId());
-        this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_NAME, getBuildName(build));
-    }
-
-    private void setCommonSpanBuildAttributes(SRunningBuild build, Span span) {
+    private void setSpanBuildAttributes(SRunningBuild build, Span span, String spanName, String serviceName) {
         if (build.getBuildType() != null) {
             this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_PROJECT_NAME, build.getBuildType().getProject().getName());
         }
@@ -138,6 +132,8 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_AGENT_NAME, build.getAgentName());
         this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_AGENT_TYPE, build.getAgent().getAgentTypeId());
         this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_NUMBER, build.getBuildNumber());
+        this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_SERVICE_NAME,  serviceName);
+        this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_NAME, spanName);
     }
 
     @Override
@@ -173,8 +169,10 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_SUCCESS_STATUS, build.getBuildStatus().isSuccessful());
                 this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_FAILED_TEST_COUNT, buildStatistics.getFailedTestCount());
                 this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_PROBLEMS_COUNT, buildStatistics.getCompilationErrorsCount());
-                this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_CHECKOUT_TIME, this.checkoutTimeMap.get(span.getSpanContext().getTraceId()));
-
+                if (this.checkoutTimeMap.containsKey(span.getSpanContext().getSpanId())) {
+                    this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_CHECKOUT_TIME, this.checkoutTimeMap.get(span.getSpanContext().getSpanId()));
+                    this.checkoutTimeMap.remove(span.getSpanContext().getSpanId());
+                }
                 span.addEvent(PluginConstants.EVENT_FINISHED);
                 Loggers.SERVER.debug("OTEL_PLUGIN: " + PluginConstants.EVENT_FINISHED + " event added to span for build " + getBuildName(build));
             } catch (Exception e) {
@@ -206,18 +204,12 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 List<String> keySplitList = Pattern.compile(":")
                         .splitAsStream(key)
                         .collect(Collectors.toList());
-                setQueuedEventsSpanBuildAttributes(build, childSpan, keySplitList.get(1), keySplitList.get(0));
+                setSpanBuildAttributes(build, childSpan, keySplitList.get(1), keySplitList.get(0));
                 childSpan.end(startDateTime + value.longValue(), TimeUnit.MILLISECONDS);
                 Loggers.SERVER.debug("OTEL_PLUGIN: Queued span added");
                 startDateTime+= value.longValue();
             }
         }
-    }
-
-    private void setQueuedEventsSpanBuildAttributes(SRunningBuild build, Span span, String spanName, String spanServiceName) {
-        this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_NAME, spanName);
-        this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_SERVICE_NAME, spanServiceName);
-        setCommonSpanBuildAttributes(build, span);
     }
 
     private void createBuildStepSpans(SRunningBuild build, Span buildSpan) {
@@ -249,23 +241,19 @@ public class TeamCityBuildListener extends BuildServerAdapter {
             Span childSpan = this.otelHelper.createTransientSpan(blockMessageStepName, parentSpan, blockLogMessage.getTimestamp().getTime());
             blockMessageSpanMap.put(blockMessageStepName, childSpan);
             Loggers.SERVER.debug("OTEL_PLUGIN: Build step span added for " + blockMessageStepName);
-            setBlockMessageSpanAttributes(blockLogMessage, childSpan, build);
+            String spanName;
+            if (blockLogMessage.getBlockDescription() != null) {
+                // Only the Build Step Types "teamcity-build-step-type" has blockDescriptions
+                spanName = blockLogMessage.getText() + ": " + blockLogMessage.getBlockDescription();
+            } else {
+                spanName = blockLogMessage.getText();
+            }
+            if (blockLogMessage.getBlockType().equals("checkout")) {
+                calculateBuildCheckoutTime(blockLogMessage, buildSpan);
+            }
+            setSpanBuildAttributes(build, childSpan, spanName, blockLogMessage.getBlockType());
             childSpan.end(blockMessageFinishDate.getTime(),TimeUnit.MILLISECONDS);
         }
-    }
-
-    private void setBlockMessageSpanAttributes(BlockLogMessage blockLogMessage, Span span, SRunningBuild build) {
-        if (blockLogMessage.getBlockDescription() != null) {
-            // Only the Build Step Types "teamcity-build-step-type" has blockDescriptions
-            this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_NAME, blockLogMessage.getText() + ": " + blockLogMessage.getBlockDescription());
-        } else {
-            this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_NAME, blockLogMessage.getText());
-        }
-        this.otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_SERVICE_NAME, blockLogMessage.getBlockType());
-        if (blockLogMessage.getBlockType().contains("checkout")) {
-            calculateBuildCheckoutTime(blockLogMessage, span);
-        }
-        setCommonSpanBuildAttributes(build, span);
     }
 
     private void calculateBuildCheckoutTime(BlockLogMessage blockLogMessage, Span span) {
@@ -275,7 +263,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
             if (checkoutEndDate != null) {
                 Duration checkoutDuration = Duration.between(checkoutStartDate.toInstant(), checkoutEndDate.toInstant());
                 long checkoutDifference = Math.abs(checkoutDuration.toMillis());
-                this.checkoutTimeMap.put(span.getSpanContext().getTraceId(), checkoutDifference);
+                this.checkoutTimeMap.put(span.getSpanContext().getSpanId(), checkoutDifference);
             }
         }
     }

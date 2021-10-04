@@ -274,7 +274,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
             Date checkoutEndDate = blockLogMessage.getFinishDate();
             if (checkoutEndDate != null) {
                 Duration checkoutDuration = Duration.between(checkoutStartDate.toInstant(), checkoutEndDate.toInstant());
-                long checkoutDifference = Math.abs(checkoutDuration.toSeconds());
+                long checkoutDifference = Math.abs(checkoutDuration.toMillis());
                 this.checkoutTimeMap.put(span.getSpanContext().getTraceId(), checkoutDifference);
             }
         }

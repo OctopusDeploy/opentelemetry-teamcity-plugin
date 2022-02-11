@@ -27,7 +27,7 @@ dependencies {
     testImplementation 'org.mockito:mockito-core:3.12.1'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.7.2'
 
-    provided 'org.jetbrains.teamcity:server-api'
+    provided 'org.jetbrains.teamcity:server-api:2021.2'
 }
 
 test {

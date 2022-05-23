@@ -19,4 +19,4 @@
 # *.go docs@example.com
 
 # For more examples see https://help.github.com/articles/about-code-owners/
-* @OctopusDeploy/eng-prod
+* @OctopusDeploy/team-engineering-productivity-maintainers

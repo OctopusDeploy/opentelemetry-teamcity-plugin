@@ -239,6 +239,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 parentSpan = buildSpan;
             }
             Span childSpan = this.otelHelper.createTransientSpan(blockMessageStepName, parentSpan, blockLogMessage.getTimestamp().getTime());
+            otelHelper.addAttributeToSpan(childSpan, PluginConstants.ATTRIBUTE_BUILD_STEP_STATUS, blockLogMessage.getStatus());
             blockMessageSpanMap.put(blockMessageStepName, childSpan);
             Loggers.SERVER.debug("OTEL_PLUGIN: Build step span added for " + blockMessageStepName);
             String spanName;

@@ -26,6 +26,7 @@
                             </c:if>
                             <c:if test='${isOverridden}'>
                                 <i>Overrides configuration from project <c:out value="${overwritesInheritedFromProjectName}" /></i>
+                                <%-- todo: reload page after button click --%>
                                 <forms:button onclick="BS.ProjectConfigurationSettings.reset()">Reset</forms:button>
                             </c:if>
                         </td>
@@ -55,6 +56,20 @@
                     <td>
                         <input type="text" name="endpoint" id="endpoint" value="${otelEndpoint}" class="textField longField">
                         <span class="error" id="error_endpoint"></span>
+                    </td>
+                </tr>
+                <tr <c:if test='${otelService != "honeycomb.io"}'>style="display: none"</c:if>>
+                    <th><label for="honeycombTeam">Team:&nbsp;<span class="mandatoryAsterix" title="Mandatory field">*</span></label></th>
+                    <td>
+                        <input type="text" name="honeycombTeam" id="honeycombTeam" value="${otelHoneycombTeam}" class="textField longField">
+                        <span class="error" id="error_honeycombTeam"></span>
+                    </td>
+                </tr>
+                <tr <c:if test='${otelService != "honeycomb.io"}'>style="display: none"</c:if>>
+                    <th><label for="honeycombDataset">Dataset:&nbsp;<span class="mandatoryAsterix" title="Mandatory field">*</span></label></th>
+                    <td>
+                        <input type="text" name="honeycombDataset" id="honeycombDataset" value="${otelHoneycombDataset}" class="textField longField">
+                        <span class="error" id="error_honeycombDataset"></span>
                     </td>
                 </tr>
                 <tr>

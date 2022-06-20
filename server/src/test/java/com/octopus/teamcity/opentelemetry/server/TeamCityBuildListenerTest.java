@@ -1,5 +1,7 @@
 package com.octopus.teamcity.opentelemetry.server;
 
+import com.octopus.teamcity.opentelemetry.server.helpers.OTELHelper;
+import com.octopus.teamcity.opentelemetry.server.helpers.OTELHelperImpl;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import jetbrains.buildServer.serverSide.BuildPromotion;
@@ -32,13 +34,9 @@ class TeamCityBuildListenerTest {
             put("testHeader2", "testHeaderValue2");
         }};
         GlobalOpenTelemetry.resetForTest();
-        this.otelHelper = new OTELHelper(HEADERS, ENDPOINT);
-        this.buildListener = new TeamCityBuildListener(buildServerListenerEventDispatcher, otelHelper);
-    }
-
-    @Test
-    void illegalStateExceptionWhenHeadersEmpty(@Mock EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher) {
-        assertThrows(IllegalStateException.class,() -> new TeamCityBuildListener(buildServerListenerEventDispatcher));
+        this.otelHelper = new OTELHelperImpl(HEADERS, ENDPOINT);
+        var factory = new TestOTELHelperFactory(otelHelper);
+        this.buildListener = new TeamCityBuildListener(buildServerListenerEventDispatcher, factory);
     }
 
     @Test

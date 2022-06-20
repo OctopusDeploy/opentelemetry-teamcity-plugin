@@ -89,6 +89,8 @@ public class ProjectConfigurationSettingsController extends BaseFormXmlControlle
         private final String service;
         private final String endpoint;
         private final String mode; //todo: change to enum
+        private final String honeycombTeam;
+        private final String honeycombDataset;
         private final ArrayList<HeaderDto> headers;
 
         public SetProjectConfigurationSettingsRequest(HttpServletRequest request) {
@@ -96,6 +98,8 @@ public class ProjectConfigurationSettingsController extends BaseFormXmlControlle
             this.service = request.getParameter("service");
             this.endpoint = request.getParameter("endpoint");
             this.mode = request.getParameter("mode");
+            this.honeycombTeam = request.getParameter("honeycombTeam");
+            this.honeycombDataset = request.getParameter("honeycombDataset");
 
             headers = new ArrayList<>();
 
@@ -126,6 +130,19 @@ public class ProjectConfigurationSettingsController extends BaseFormXmlControlle
             if (StringUtil.isEmptyOrSpaces(this.service)) {
                 errors.addError("service", "Service must be set!");
             }
+            if (!this.service.equals("honeycomb.io") && !this.service.equals("custom")) {
+                errors.addError("service", "Service must be set to either 'honeycomb.io' or 'custom'!");
+            }
+
+            if (!this.service.equals("honeycomb.io")) {
+                if (StringUtil.isEmptyOrSpaces(this.honeycombTeam)) {
+                    errors.addError("honeycombTeam", "Team must be set!");
+                }
+                if (StringUtil.isEmptyOrSpaces(this.honeycombDataset)) {
+                    errors.addError("honeycombDataset", "Dataset must be set!");
+                }
+            }
+
             if (StringUtil.isEmptyOrSpaces(this.endpoint)) {
                 errors.addError("endpoint", "Endpoint must be set!");
             } else {
@@ -152,6 +169,8 @@ public class ProjectConfigurationSettingsController extends BaseFormXmlControlle
             params.put(PROPERTY_KEY_ENABLED, enabled);
             params.put(PROPERTY_KEY_SERVICE, service);
             params.put(PROPERTY_KEY_ENDPOINT, endpoint);
+            params.put(PROPERTY_KEY_HONEYCOMB_DATASET, honeycombDataset);
+            params.put(PROPERTY_KEY_HONEYCOMB_TEAM, honeycombTeam);
 
             headers.forEach(x -> {
                 var valueToSave = x.getType().equals("plaintext")

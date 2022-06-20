@@ -64,6 +64,8 @@ public class ProjectConfigurationTab extends EditProjectTab {
             model.put("otelEnabled", params.get(PROPERTY_KEY_ENABLED));
             model.put("otelService", params.get(PROPERTY_KEY_SERVICE));
             model.put("otelEndpoint", params.get(PROPERTY_KEY_ENDPOINT));
+            model.put("otelHoneycombTeam", params.get(PROPERTY_KEY_HONEYCOMB_TEAM));
+            model.put("otelHoneycombDataset", params.get(PROPERTY_KEY_HONEYCOMB_DATASET));
 
             var headers = new ArrayList<HeaderDto>();
             params.forEach((k,v)->{

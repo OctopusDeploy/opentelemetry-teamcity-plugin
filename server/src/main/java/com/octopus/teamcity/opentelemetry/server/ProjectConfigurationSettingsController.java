@@ -112,48 +112,38 @@ public class ProjectConfigurationSettingsController extends BaseFormXmlControlle
         }
 
         public boolean validate(@NotNull ActionErrors errors) {
-            if (StringUtil.isEmptyOrSpaces(this.mode)) {
+            if (StringUtil.isEmptyOrSpaces(this.mode))
                 errors.addError("mode", "Mode must be set!");
-            }
-            if (!this.mode.equals("reset") && !this.mode.equals("save")) {
+            if (!this.mode.equals("reset") && !this.mode.equals("save"))
                 errors.addError("mode", "Mode must be set to either 'reset' or 'save'!");
-            }
             if (this.mode.equals("reset"))
-                return true;
+                return true; //short circuit the rest of the validation - all related to "save"
 
-            if (StringUtil.isEmptyOrSpaces(this.service)) {
+            if (StringUtil.isEmptyOrSpaces(this.service))
                 errors.addError("service", "Service must be set!");
-            }
-            if (!this.service.equals("honeycomb.io") && !this.service.equals("custom")) {
+            if (!this.service.equals("honeycomb.io") && !this.service.equals("custom"))
                 errors.addError("service", "Service must be set to either 'honeycomb.io' or 'custom'!");
-            }
 
             if (!this.service.equals("honeycomb.io")) {
-                if (StringUtil.isEmptyOrSpaces(this.honeycombTeam)) {
+                if (StringUtil.isEmptyOrSpaces(this.honeycombTeam))
                     errors.addError("honeycombTeam", "Team must be set!");
-                }
-                if (StringUtil.isEmptyOrSpaces(this.honeycombDataset)) {
+                if (StringUtil.isEmptyOrSpaces(this.honeycombDataset))
                     errors.addError("honeycombDataset", "Dataset must be set!");
-                }
             }
 
             if (StringUtil.isEmptyOrSpaces(this.endpoint)) {
                 errors.addError("endpoint", "Endpoint must be set!");
             } else {
                 var urlValidator = new UrlValidator(new String[] {"http", "https"});
-                if (!urlValidator.isValid(this.endpoint)) {
+                if (!urlValidator.isValid(this.endpoint))
                     errors.addError("endpoint", "Endpoint must be a valid url!");
-                }
             }
-            if (!StringUtil.isEmptyOrSpaces(enabled) && !enabled.equals("true") && !enabled.equals("false")) {
+            if (!StringUtil.isEmptyOrSpaces(enabled) && !enabled.equals("true") && !enabled.equals("false"))
                 errors.addError("enabled", String.format("Enabled value %s was not set to true or false!", enabled));
-            }
-            if (headers.stream().anyMatch(x -> StringUtil.isEmptyOrSpaces(x.getKey()))) {
+            if (headers.stream().anyMatch(x -> StringUtil.isEmptyOrSpaces(x.getKey())))
                 errors.addError("headers", "One or more header keys are empty!");
-            }
-            if (headers.stream().anyMatch(x -> StringUtil.isEmptyOrSpaces(x.getValue()))) {
+            if (headers.stream().anyMatch(x -> StringUtil.isEmptyOrSpaces(x.getValue())))
                 errors.addError("headers", "One or more header values are empty!");
-            }
 
             return errors.hasNoErrors();
         }

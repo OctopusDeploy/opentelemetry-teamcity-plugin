@@ -100,4 +100,3 @@ public class ProjectConfigurationTab extends EditProjectTab {
         );
     }
 }
-

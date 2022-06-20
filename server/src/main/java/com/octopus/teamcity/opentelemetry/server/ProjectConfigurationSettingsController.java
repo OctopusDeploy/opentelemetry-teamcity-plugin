@@ -8,10 +8,10 @@ import jetbrains.buildServer.serverSide.crypt.EncryptUtil;
 import jetbrains.buildServer.serverSide.crypt.RSACipher;
 import jetbrains.buildServer.util.StringUtil;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
+import org.apache.commons.validator.routines.UrlValidator;
 import org.jdom.Element;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.web.servlet.ModelAndView;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
@@ -129,11 +129,10 @@ public class ProjectConfigurationSettingsController extends BaseFormXmlControlle
             if (StringUtil.isEmptyOrSpaces(this.endpoint)) {
                 errors.addError("endpoint", "Endpoint must be set!");
             } else {
-                //todo: validate url - see https://stackoverflow.com/questions/1600291/validating-url-in-java
-//                var urlValidator = new UrlValidator({"http", "https"});
-//                if (!urlValidator.isValid("ftp://foo.bar.com/")) {
-//                    System.out.println("URL is invalid");
-//                }
+                var urlValidator = new UrlValidator(new String[] {"http", "https"});
+                if (!urlValidator.isValid(this.endpoint)) {
+                    errors.addError("endpoint", "Endpoint must be a valid url!");
+                }
             }
             if (!StringUtil.isEmptyOrSpaces(enabled) && !enabled.equals("true") && !enabled.equals("false")) {
                 errors.addError("enabled", String.format("Enabled value %s was not set to true or false!", enabled));

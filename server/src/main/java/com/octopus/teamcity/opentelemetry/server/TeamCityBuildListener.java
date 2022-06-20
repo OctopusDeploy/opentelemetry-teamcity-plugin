@@ -28,24 +28,23 @@ import java.util.stream.Collectors;
 
 public class TeamCityBuildListener extends BuildServerAdapter {
 
-    private final OTELHelper otelHelper;
+    private OTELHelper otelHelper;
     private static final String ENDPOINT = TeamCityProperties.getProperty(PluginConstants.PROPERTY_KEY_ENDPOINT);
     private final ConcurrentHashMap<String, Long> checkoutTimeMap;
 
     @Autowired
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public TeamCityBuildListener(EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher) {
+        this.checkoutTimeMap = new ConcurrentHashMap<>();
         buildServerListenerEventDispatcher.addListener(this);
         Loggers.SERVER.info("OTEL_PLUGIN: BuildListener registered.");
-        this.otelHelper = new OTELHelper(getExporterHeaders(), ENDPOINT);
-        this.checkoutTimeMap = new ConcurrentHashMap<>();
     }
 
     public TeamCityBuildListener(EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher, OTELHelper otelHelper) {
-        buildServerListenerEventDispatcher.addListener(this);
-        Loggers.SERVER.info("OTEL_PLUGIN: BuildListener registered.");
         this.otelHelper = otelHelper;
         this.checkoutTimeMap = new ConcurrentHashMap<>();
+        buildServerListenerEventDispatcher.addListener(this);
+        Loggers.SERVER.info("OTEL_PLUGIN: BuildListener registered.");
     }
 
     private Map<String, String> getExporterHeaders() throws IllegalStateException {
@@ -64,7 +63,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                         .collect(Collectors.toMap(key -> key[0], value -> value[1]));
             }
         }
-        throw new IllegalStateException(PluginConstants.EXCEPTION_ERROR_MESSAGE_HEADERS_UNSET);
+        return new HashMap<>();
     }
 
     @Override
@@ -95,7 +94,20 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     }
 
     private boolean buildListenerReady() {
-        return (this.otelHelper != null) && this.otelHelper.isReady();
+        if ((this.otelHelper != null) && this.otelHelper.isReady()) {
+            return true;
+        }
+        if (this.otelHelper == null) {
+            var headers = getExporterHeaders();
+            if (headers.isEmpty())
+            {
+                Loggers.SERVER.warn("OTEL_PLUGIN: Headers values for: " + PluginConstants.PROPERTY_KEY_HEADERS + " not set in internal properties");
+                return false;
+            }
+            this.otelHelper = new OTELHelper(headers, ENDPOINT);
+        }
+
+        return this.otelHelper.isReady();
     }
 
     private String getBuildId (SRunningBuild build) {

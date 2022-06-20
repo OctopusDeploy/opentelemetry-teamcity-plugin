@@ -6,6 +6,8 @@ public class PluginConstants {
 
     public static final String SERVICE_NAME = "TeamCity";
 
+    public static final String PROPERTY_KEY_ENABLED = "octopus.teamcity.opentelemetry.plugin.enabled";
+    public static final String PROPERTY_KEY_SERVICE = "octopus.teamcity.opentelemetry.plugin.service";
     public static final String PROPERTY_KEY_ENDPOINT = "octopus.teamcity.opentelemetry.plugin.endpoint";
     public static final String PROPERTY_KEY_HEADERS = "octopus.teamcity.opentelemetry.plugin.headers";
 
@@ -33,5 +35,9 @@ public class PluginConstants {
     public static final String EXCEPTION_ERROR_MESSAGE_DURING_BUILD_START = "Error during build start process";
     public static final String EXCEPTION_ERROR_MESSAGE_DURING_BUILD_FINISH = "Error during build finish process";
     public static final String EXCEPTION_ERROR_MESSAGE_HEADERS_UNSET = "Headers values for: " + PROPERTY_KEY_HEADERS + " not set in internal properties";
+
+    public final static String PLUGIN_NAME = "teamcity-opentelemetry";
+    public final static String PLUGIN_PACKAGE = PluginConstants.class.getPackage().getName();
+    public final static String PLUGIN_PATH = PLUGIN_PACKAGE.replace('.', '/');
 
 }

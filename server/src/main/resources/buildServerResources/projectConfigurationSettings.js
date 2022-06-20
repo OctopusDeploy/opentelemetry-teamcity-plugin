@@ -1,10 +1,6 @@
 'use strict';
 
 BS.ProjectConfigurationSettings = OO.extend(BS.PluginPropertiesForm, OO.extend(BS.AbstractPasswordForm, {
-    // getContainer: function () {
-    //     return $('AgentPriorityDialog');
-    // },
-    //
     formElement: function () {
         return $('editOpenTelemetrySettingsPage');
     },

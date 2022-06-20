@@ -55,11 +55,13 @@ public class BuildOverviewExtensionController extends BaseController
         // but if we do that, it appears twice on the Sakura UI, and it's in an extremely ugly
         // iframe that makes me cry
 
-//        final SimplePageExtension classicPageExtension = new SimplePageExtension(pagePlaces);
-//        classicPageExtension.setPluginName(PLUGIN_NAME);
-//        classicPageExtension.setPlaceId(PlaceId.BUILD_RESULTS_FRAGMENT);
-//        classicPageExtension.setIncludeUrl(url);
-//        classicPageExtension.register();
+        //todo: reach out to JetBrains and ask about it
+
+        // final SimplePageExtension classicPageExtension = new SimplePageExtension(pagePlaces);
+        // classicPageExtension.setPluginName(PLUGIN_NAME);
+        // classicPageExtension.setPlaceId(PlaceId.BUILD_RESULTS_FRAGMENT);
+        // classicPageExtension.setIncludeUrl(url);
+        // classicPageExtension.register();
 
         controllerManager.registerController(url, this);
     }
@@ -89,6 +91,9 @@ public class BuildOverviewExtensionController extends BaseController
                 var params = feature.getParameters();
 
                 if (!params.get(PROPERTY_KEY_ENABLED).equals("true"))
+                    return null;
+
+                if (!params.get(PROPERTY_KEY_SERVICE).equals("honeycomb.io"))
                     return null;
 
                 var model = mv.getModel();

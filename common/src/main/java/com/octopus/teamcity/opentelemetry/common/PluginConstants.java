@@ -36,10 +36,6 @@ public class PluginConstants {
 
     public static final String EXCEPTION_ERROR_MESSAGE_DURING_BUILD_START = "Error during build start process";
     public static final String EXCEPTION_ERROR_MESSAGE_DURING_BUILD_FINISH = "Error during build finish process";
-    public static final String EXCEPTION_ERROR_MESSAGE_HEADERS_UNSET = "Headers values for: " + PROPERTY_KEY_HEADERS + " not set in internal properties";
 
     public final static String PLUGIN_NAME = "teamcity-opentelemetry";
-    public final static String PLUGIN_PACKAGE = PluginConstants.class.getPackage().getName();
-    public final static String PLUGIN_PATH = PLUGIN_PACKAGE.replace('.', '/');
-
 }

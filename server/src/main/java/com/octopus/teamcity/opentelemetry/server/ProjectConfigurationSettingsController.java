@@ -19,11 +19,6 @@ import java.util.HashMap;
 
 import static com.octopus.teamcity.opentelemetry.common.PluginConstants.*;
 
-/**
- * User: g.chernyshev
- * Date: 14/11/16
- * Time: 22:40
- */
 public class ProjectConfigurationSettingsController extends BaseFormXmlController {
 
     @NotNull
@@ -61,15 +56,14 @@ public class ProjectConfigurationSettingsController extends BaseFormXmlControlle
             return;
         }
 
+        var feature = project.getOwnFeaturesOfType(PLUGIN_NAME);
         if (settingsRequest.mode.equals("reset")) {
-            var feature = project.getOwnFeaturesOfType(PLUGIN_NAME);
             if (!feature.isEmpty()) {
                 project.removeFeature(feature.stream().findFirst().get().getId());
             }
             project.persist();
             getOrCreateMessages(request).addMessage("featureReset", "Feature was reset to the inherited settings.");
         } else {
-            var feature = project.getOwnFeaturesOfType(PLUGIN_NAME);
             if (feature.isEmpty()) {
                 project.addFeature(PLUGIN_NAME, settingsRequest.AsParams());
             } else {
@@ -86,7 +80,7 @@ public class ProjectConfigurationSettingsController extends BaseFormXmlControlle
 
     class SetProjectConfigurationSettingsRequest {
         private final String enabled;
-        private final String service;
+        private final String service; //todo: change to an enum
         private final String endpoint;
         private final String mode; //todo: change to enum
         private final String honeycombTeam;

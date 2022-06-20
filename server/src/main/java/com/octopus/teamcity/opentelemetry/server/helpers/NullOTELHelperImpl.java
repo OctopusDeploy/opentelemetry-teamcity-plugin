@@ -34,6 +34,5 @@ public class NullOTELHelperImpl implements OTELHelper {
 
     @Override
     public void addAttributeToSpan(Span span, String attributeName, Object attributeValue) {
-
     }
 }

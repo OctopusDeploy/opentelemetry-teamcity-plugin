@@ -7,4 +7,3 @@ public interface OTELHelperFactory {
 
     void release(Long buildId);
 }
-

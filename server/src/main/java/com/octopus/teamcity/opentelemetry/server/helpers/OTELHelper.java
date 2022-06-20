@@ -38,4 +38,3 @@ public interface OTELHelper {
 
     void addAttributeToSpan(Span span, String attributeName, Object attributeValue);
 }
-

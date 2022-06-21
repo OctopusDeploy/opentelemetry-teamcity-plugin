@@ -15,7 +15,6 @@ public class HeaderDto {
 
     public String getKey() { return key; }
     public String getValue() { return value; }
-
     public String getEncryptedValue() { return RSACipher.encryptDataForWeb(value); }
     public String getType() { return type; }
 }

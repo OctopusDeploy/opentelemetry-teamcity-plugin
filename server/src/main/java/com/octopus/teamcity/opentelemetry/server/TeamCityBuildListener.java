@@ -19,9 +19,6 @@ import jetbrains.buildServer.util.EventDispatcher;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.*;
@@ -57,7 +54,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     public void buildStarted(@NotNull SRunningBuild build) {
         Loggers.SERVER.debug(String.format("OTEL_PLUGIN: Build started method triggered for %s, id %d", getBuildName(build), build.getBuildId()));
         if (buildListenerReady(build)) {
-            var parentBuild = getParentBuild(build);
+            var parentBuild = getRootBuildInChain(build);
             var parentBuildId = parentBuild.getId();
             var otelHelper = otelHelperFactory.getOTELHelper(parentBuild);
             Loggers.SERVER.debug(String.format("OTEL_PLUGIN: Root build of build id %d is %d", build.getBuildId(), parentBuildId));
@@ -86,7 +83,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     }
 
     private boolean buildListenerReady(SRunningBuild build) {
-        var parentBuild = getParentBuild(build);
+        var parentBuild = getRootBuildInChain(build);
         var helper = otelHelperFactory.getOTELHelper(parentBuild);
         return helper.isReady();
     }
@@ -99,7 +96,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         return build.getBuildType() != null ? build.getBuildType().getName() : "unknown_build_name";
     }
 
-    private BuildPromotion getParentBuild(SRunningBuild build) {
+    private BuildPromotion getRootBuildInChain(SRunningBuild build) {
         BuildPromotion[] parentBuilds = build.getBuildPromotion().findTops();
         BuildPromotion parentBuildPromotion = parentBuilds[0];
         return parentBuildPromotion;
@@ -148,7 +145,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     private void buildFinishedOrInterrupted (SRunningBuild build) {
         BuildStatistics buildStatistics = build.getBuildStatistics(
                 BuildStatisticsOptions.ALL_TESTS_NO_DETAILS);
-        var otelHelper = otelHelperFactory.getOTELHelper(getParentBuild(build));
+        var otelHelper = otelHelperFactory.getOTELHelper(getRootBuildInChain(build));
 
         if(otelHelper.getSpan(getBuildId(build)) != null) {
             Span span = otelHelper.getSpan(getBuildId(build));
@@ -176,7 +173,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 span.end();
                 var buildId = getBuildId(build);
                 otelHelper.removeSpan(buildId);
-                if (buildId.equals(String.valueOf(getParentBuild(build))))
+                if (buildId.equals(String.valueOf(getRootBuildInChain(build))))
                     otelHelperFactory.release(build.getBuildId());
             }
         } else {
@@ -195,7 +192,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
             if (key.contains("queueWaitReason:")) {
                 BigDecimal value = entry.getValue();
                 Loggers.SERVER.debug("OTEL_PLUGIN: Queue value: " + value);
-                var otelHelper = otelHelperFactory.getOTELHelper(getParentBuild(build));
+                var otelHelper = otelHelperFactory.getOTELHelper(getRootBuildInChain(build));
                 Span childSpan = otelHelper.createTransientSpan(key, buildSpan, startDateTime);
                 List<String> keySplitList = Pattern.compile(":")
                         .splitAsStream(key)
@@ -234,7 +231,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
             } else {
                 parentSpan = buildSpan;
             }
-            var otelHelper = otelHelperFactory.getOTELHelper(getParentBuild(build));
+            var otelHelper = otelHelperFactory.getOTELHelper(getRootBuildInChain(build));
             Span childSpan = otelHelper.createTransientSpan(blockMessageStepName, parentSpan, blockLogMessage.getTimestamp().getTime());
             otelHelper.addAttributeToSpan(childSpan, PluginConstants.ATTRIBUTE_BUILD_STEP_STATUS, blockLogMessage.getStatus());
             blockMessageSpanMap.put(blockMessageStepName, childSpan);

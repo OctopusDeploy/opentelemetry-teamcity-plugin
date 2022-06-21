@@ -13,17 +13,17 @@ import java.util.Scanner;
 
 public class BuildStorageManager {
 
-    public static final String OTEL_TRACE_ID = "otel-trace-id";
+    public static final String OTEL_TRACE_ID_FILENAME = "otel-trace-id";
 
     @Nullable
     public String getTraceId(SBuild build) {
         File artifactsDir = build.getArtifactsDirectory();
-        File pluginFile = new File(artifactsDir, jetbrains.buildServer.ArtifactsConstants.TEAMCITY_ARTIFACTS_DIR + File.separatorChar + OTEL_TRACE_ID);
+        File pluginFile = new File(artifactsDir, jetbrains.buildServer.ArtifactsConstants.TEAMCITY_ARTIFACTS_DIR + File.separatorChar + OTEL_TRACE_ID_FILENAME);
 
         Loggers.SERVER.debug(String.format("OTEL_PLUGIN: Reading trace id or build %d.", build.getBuildId()));
 
         if (!pluginFile.exists()) {
-            Loggers.SERVER.info(String.format("OTEL_PLUGIN: Unable to find build artifact %s for build %d.", OTEL_TRACE_ID, build.getBuildId()));
+            Loggers.SERVER.info(String.format("OTEL_PLUGIN: Unable to find build artifact %s for build %d.", OTEL_TRACE_ID_FILENAME, build.getBuildId()));
             return null;
         }
 
@@ -42,7 +42,7 @@ public class BuildStorageManager {
 
     public void saveTraceId(SRunningBuild build, String traceId) {
         File artifactsDir = build.getArtifactsDirectory();
-        File pluginFile = new File(artifactsDir, jetbrains.buildServer.ArtifactsConstants.TEAMCITY_ARTIFACTS_DIR + File.separatorChar + OTEL_TRACE_ID);
+        File pluginFile = new File(artifactsDir, jetbrains.buildServer.ArtifactsConstants.TEAMCITY_ARTIFACTS_DIR + File.separatorChar + OTEL_TRACE_ID_FILENAME);
         try {
             Loggers.SERVER.debug(String.format("OTEL_PLUGIN: Saving trace id %s for build %d.", traceId, build.getBuildId()));
             if (pluginFile.createNewFile()){

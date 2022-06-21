@@ -85,7 +85,7 @@ public class BuildOverviewExtensionController extends BaseController
 
         if (buildId != null) {
             final SBuild build = sBuildServer.findBuildInstanceById(buildId);
-            if (build == null)
+            if (build == null) //if it's queued, we wont get it
                 return null;
 
             final SProject project = projectManager.findProjectByExternalId(build.getProjectExternalId());
@@ -101,13 +101,13 @@ public class BuildOverviewExtensionController extends BaseController
                 if (!params.get(PROPERTY_KEY_SERVICE).equals("honeycomb.io"))
                     return null;
 
-                var model = mv.getModel();
-                model.put("team", params.get(PROPERTY_KEY_HONEYCOMB_TEAM));
-                model.put("dataset", params.get(PROPERTY_KEY_HONEYCOMB_DATASET));
-
                 var traceId = buildStorageManager.getTraceId(build);
                 if (traceId == null)
                     return null;
+
+                var model = mv.getModel();
+                model.put("team", params.get(PROPERTY_KEY_HONEYCOMB_TEAM));
+                model.put("dataset", params.get(PROPERTY_KEY_HONEYCOMB_DATASET));
                 model.put("traceId", traceId);
 
                 //we pad the time to ensure that we get all the spans, just in case we get a slight diff in the

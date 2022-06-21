@@ -3,6 +3,7 @@ package com.octopus.teamcity.opentelemetry.server;
 import jetbrains.buildServer.controllers.ActionErrors;
 import jetbrains.buildServer.controllers.BaseFormXmlController;
 import jetbrains.buildServer.controllers.SimpleView;
+import jetbrains.buildServer.log.Loggers;
 import jetbrains.buildServer.serverSide.*;
 import jetbrains.buildServer.serverSide.crypt.EncryptUtil;
 import jetbrains.buildServer.serverSide.crypt.RSACipher;
@@ -19,7 +20,6 @@ import java.util.HashMap;
 import static com.octopus.teamcity.opentelemetry.common.PluginConstants.*;
 
 public class ProjectConfigurationSettingsController extends BaseFormXmlController {
-
     @NotNull
     private final ProjectManager projectManager;
 
@@ -59,9 +59,11 @@ public class ProjectConfigurationSettingsController extends BaseFormXmlControlle
         if (settingsRequest.mode.equals("reset")) {
             if (!feature.isEmpty()) {
                 project.removeFeature(feature.stream().findFirst().get().getId());
+                project.persist();
+                getOrCreateMessages(request).addMessage("featureReset", "Feature was reset to the inherited settings.");
+            } else {
+                Loggers.SERVER.warn(String.format("OTEL_PLUGIN: Got a request to reset settings, but the settings didn't exist on project %s?", project.getProjectId()));
             }
-            project.persist();
-            getOrCreateMessages(request).addMessage("featureReset", "Feature was reset to the inherited settings.");
         } else {
             if (feature.isEmpty()) {
                 project.addFeature(PLUGIN_NAME, settingsRequest.AsParams());

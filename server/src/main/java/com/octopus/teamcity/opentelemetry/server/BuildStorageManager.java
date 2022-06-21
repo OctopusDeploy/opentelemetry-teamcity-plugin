@@ -28,10 +28,8 @@ public class BuildStorageManager {
         }
 
         String traceId;
-        try {
-            var fileReader = new Scanner(pluginFile);
+        try (Scanner fileReader = new Scanner(pluginFile)) {
             traceId = fileReader.nextLine();
-            fileReader.close();
             Loggers.SERVER.debug(String.format("OTEL_PLUGIN: Retrieved trace id %s for build %d.", traceId, build.getBuildId()));
         } catch (FileNotFoundException e) {
             Loggers.SERVER.warn(String.format("OTEL_PLUGIN: Unable to find trace id data file for build %d.", build.getBuildId()));
@@ -43,12 +41,10 @@ public class BuildStorageManager {
     public void saveTraceId(SRunningBuild build, String traceId) {
         File artifactsDir = build.getArtifactsDirectory();
         File pluginFile = new File(artifactsDir, jetbrains.buildServer.ArtifactsConstants.TEAMCITY_ARTIFACTS_DIR + File.separatorChar + OTEL_TRACE_ID_FILENAME);
-        try {
-            Loggers.SERVER.debug(String.format("OTEL_PLUGIN: Saving trace id %s for build %d.", traceId, build.getBuildId()));
+        Loggers.SERVER.debug(String.format("OTEL_PLUGIN: Saving trace id %s to %s for build %d.", traceId, OTEL_TRACE_ID_FILENAME, build.getBuildId()));
+        try (FileWriter fileWriter = new FileWriter(pluginFile)) {
             if (pluginFile.createNewFile()){
-                var fileWriter = new FileWriter(pluginFile);
                 fileWriter.write(traceId);
-                fileWriter.close();
             }
         } catch (IOException e) {
             Loggers.SERVER.warn(String.format("OTEL_PLUGIN: Error trying to save trace id for build %d.", build.getBuildId()));

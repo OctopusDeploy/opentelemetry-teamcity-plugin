@@ -8,7 +8,6 @@ import jetbrains.buildServer.serverSide.crypt.EncryptUtil;
 import jetbrains.buildServer.serverSide.crypt.RSACipher;
 import jetbrains.buildServer.util.StringUtil;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
-import org.apache.commons.validator.routines.UrlValidator;
 import org.jdom.Element;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.web.servlet.ModelAndView;
@@ -134,8 +133,7 @@ public class ProjectConfigurationSettingsController extends BaseFormXmlControlle
             if (StringUtil.isEmptyOrSpaces(this.endpoint)) {
                 errors.addError("endpoint", "Endpoint must be set!");
             } else {
-                var urlValidator = new UrlValidator(new String[] {"http", "https"});
-                if (!urlValidator.isValid(this.endpoint))
+                if (!this.endpoint.startsWith("https://") && !this.endpoint.startsWith("http://"))
                     errors.addError("endpoint", "Endpoint must be a valid url!");
             }
             if (!StringUtil.isEmptyOrSpaces(enabled) && !enabled.equals("true") && !enabled.equals("false"))

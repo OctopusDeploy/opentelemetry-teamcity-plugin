@@ -37,4 +37,6 @@ public interface OTELHelper {
     Span getSpan(String buildId);
 
     void addAttributeToSpan(Span span, String attributeName, Object attributeValue);
+
+    void release();
 }

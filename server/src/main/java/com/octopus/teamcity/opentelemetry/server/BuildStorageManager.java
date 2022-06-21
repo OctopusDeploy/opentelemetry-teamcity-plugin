@@ -20,14 +20,19 @@ public class BuildStorageManager {
         File artifactsDir = build.getArtifactsDirectory();
         File pluginFile = new File(artifactsDir, jetbrains.buildServer.ArtifactsConstants.TEAMCITY_ARTIFACTS_DIR + File.separatorChar + OTEL_TRACE_ID);
 
-        if (!pluginFile.exists())
+        Loggers.SERVER.debug(String.format("OTEL_PLUGIN: Reading trace id or build %d.", build.getBuildId()));
+
+        if (!pluginFile.exists()) {
+            Loggers.SERVER.info(String.format("OTEL_PLUGIN: Unable to find build artifact %s for build %d.", OTEL_TRACE_ID, build.getBuildId()));
             return null;
+        }
 
         String traceId;
         try {
             var fileReader = new Scanner(pluginFile);
             traceId = fileReader.nextLine();
             fileReader.close();
+            Loggers.SERVER.debug(String.format("OTEL_PLUGIN: Retrieved trace id %s for build %d.", traceId, build.getBuildId()));
         } catch (FileNotFoundException e) {
             Loggers.SERVER.warn(String.format("OTEL_PLUGIN: Unable to find trace id data file for build %d.", build.getBuildId()));
             return null;
@@ -39,6 +44,7 @@ public class BuildStorageManager {
         File artifactsDir = build.getArtifactsDirectory();
         File pluginFile = new File(artifactsDir, jetbrains.buildServer.ArtifactsConstants.TEAMCITY_ARTIFACTS_DIR + File.separatorChar + OTEL_TRACE_ID);
         try {
+            Loggers.SERVER.debug(String.format("OTEL_PLUGIN: Saving trace id %s for build %d.", traceId, build.getBuildId()));
             if (pluginFile.createNewFile()){
                 var fileWriter = new FileWriter(pluginFile);
                 fileWriter.write(traceId);

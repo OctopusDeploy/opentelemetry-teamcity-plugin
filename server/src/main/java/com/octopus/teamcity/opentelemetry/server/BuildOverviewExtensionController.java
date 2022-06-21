@@ -72,6 +72,8 @@ public class BuildOverviewExtensionController extends BaseController
         final ModelAndView mv = new ModelAndView(pluginDescriptor.getPluginResourcesPath("buildOverviewExtension.jsp"));
         boolean isSakuraUI = WebUtil.sakuraUIOpened(request);
 
+        //todo: I think we need to do some auto-refreshes until we have data?
+
         Long buildId;
 
         if (isSakuraUI) {
@@ -83,6 +85,9 @@ public class BuildOverviewExtensionController extends BaseController
 
         if (buildId != null) {
             final SBuild build = sBuildServer.findBuildInstanceById(buildId);
+            if (build == null)
+                return null;
+
             final SProject project = projectManager.findProjectByExternalId(build.getProjectExternalId());
 
             var features = project.getAvailableFeaturesOfType(PLUGIN_NAME);
@@ -103,6 +108,7 @@ public class BuildOverviewExtensionController extends BaseController
                 var traceId = buildStorageManager.getTraceId(build);
                 if (traceId == null)
                     return null;
+                model.put("traceId", traceId);
 
                 //we pad the time to ensure that we get all the spans, just in case we get a slight diff in the
                 //timestamps between the traces and the server start time.

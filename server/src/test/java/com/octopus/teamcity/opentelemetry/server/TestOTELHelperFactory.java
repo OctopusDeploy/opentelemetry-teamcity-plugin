@@ -12,7 +12,7 @@ public class TestOTELHelperFactory implements OTELHelperFactory {
     }
 
     @Override
-    public OTELHelper getOTELHelper(SRunningBuild build) {
+    public OTELHelper getOTELHelper(Long buildId) {
         return otelHelper;
     }
 

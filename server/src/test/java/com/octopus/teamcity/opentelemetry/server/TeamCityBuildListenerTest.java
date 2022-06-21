@@ -36,7 +36,8 @@ class TeamCityBuildListenerTest {
         GlobalOpenTelemetry.resetForTest();
         this.otelHelper = new OTELHelperImpl(HEADERS, ENDPOINT);
         var factory = new TestOTELHelperFactory(otelHelper);
-        this.buildListener = new TeamCityBuildListener(buildServerListenerEventDispatcher, factory);
+        var buildStorageManager = new BuildStorageManager();
+        this.buildListener = new TeamCityBuildListener(buildServerListenerEventDispatcher, factory, buildStorageManager);
     }
 
     @Test

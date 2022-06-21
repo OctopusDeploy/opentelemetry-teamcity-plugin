@@ -2,6 +2,7 @@ package com.octopus.teamcity.opentelemetry.server;
 
 import com.octopus.teamcity.opentelemetry.server.helpers.OTELHelper;
 import com.octopus.teamcity.opentelemetry.server.helpers.OTELHelperFactory;
+import jetbrains.buildServer.serverSide.BuildPromotion;
 import jetbrains.buildServer.serverSide.SRunningBuild;
 
 public class TestOTELHelperFactory implements OTELHelperFactory {
@@ -12,7 +13,7 @@ public class TestOTELHelperFactory implements OTELHelperFactory {
     }
 
     @Override
-    public OTELHelper getOTELHelper(Long buildId) {
+    public OTELHelper getOTELHelper(BuildPromotion build) {
         return otelHelper;
     }
 

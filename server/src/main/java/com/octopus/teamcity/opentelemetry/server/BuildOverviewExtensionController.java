@@ -68,20 +68,14 @@ public class BuildOverviewExtensionController extends BaseController
 
     @Nullable
     @Override
-    protected ModelAndView doHandle(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response) throws Exception {
+    protected ModelAndView doHandle(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response) {
         final ModelAndView mv = new ModelAndView(pluginDescriptor.getPluginResourcesPath("buildOverviewExtension.jsp"));
-        boolean isSakuraUI = WebUtil.sakuraUIOpened(request);
 
         //todo: I think we need to do some auto-refreshes until we have data?
 
-        Long buildId;
-
-        if (isSakuraUI) {
-            PluginUIContext pluginUIContext = PluginUIContext.getFromRequest(request);
-            buildId = pluginUIContext.getBuildId();
-        } else {
-            buildId = Long.parseLong(request.getParameter("buildId"));
-        }
+        Long buildId = WebUtil.sakuraUIOpened(request)
+            ? PluginUIContext.getFromRequest(request).getBuildId()
+            : Long.parseLong(request.getParameter("buildId"));
 
         if (buildId != null) {
             final SBuild build = sBuildServer.findBuildInstanceById(buildId);

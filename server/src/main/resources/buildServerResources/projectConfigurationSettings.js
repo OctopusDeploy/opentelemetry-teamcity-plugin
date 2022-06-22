@@ -10,7 +10,7 @@ BS.ProjectConfigurationSettings = OO.extend(BS.PluginPropertiesForm, OO.extend(B
     },
 
     addHeader: function(button, index) {
-        $j(button).closest('tr').before($j(" <tr>\n" +
+        $j(button).closest('tr').before($j("<tr>\n" +
                                            "    <td>\n" +
                                            "        <input type=\"text\" name=\"headerKey_" + index + "\" value=\"\" class=\"textField\">\n" +
                                            "    </td>\n" +
@@ -57,27 +57,24 @@ BS.ProjectConfigurationSettings = OO.extend(BS.PluginPropertiesForm, OO.extend(B
         }
     },
 
-    save: function () {
-        $j("input[name='mode']").val("save");
+    postBackToServer: function (mode) {
+        $j("input[name='mode']").val(mode);
         BS.FormSaver.save(this, "/admin/teamcity-opentelemetry/settings.html", OO.extend(BS.ErrorsAwareListener, {
             onCompleteSave: function (form, responseXML, err) {
                 err = BS.XMLResponse.processErrors(responseXML, {}, BS.PluginPropertiesForm.propertiesErrorsHandler);
                 form.setSaving(false);
                 form.enable();
+                location.reload();
             }
         }));
         return false;
     },
 
+    save: function () {
+        return this.postBackToServer("save");
+    },
+
     reset: function () {
-        $j("input[name='mode']").val("reset");
-        BS.FormSaver.save(this, "/admin/teamcity-opentelemetry/settings.html", OO.extend(BS.ErrorsAwareListener, {
-            onCompleteSave: function (form, responseXML, err) {
-                err = BS.XMLResponse.processErrors(responseXML, {}, BS.PluginPropertiesForm.propertiesErrorsHandler);
-                form.setSaving(false);
-                form.enable();
-            }
-        }));
-        return false;
+        return this.postBackToServer("reset");
     }
 }));

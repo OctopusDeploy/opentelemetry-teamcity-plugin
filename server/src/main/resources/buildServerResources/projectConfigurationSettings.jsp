@@ -26,7 +26,6 @@
                             </c:if>
                             <c:if test='${isOverridden}'>
                                 <i>Overrides configuration from project <c:out value="${overwritesInheritedFromProjectName}" /></i>
-                                <%-- todo: reload page after button click --%>
                                 <forms:button onclick="BS.ProjectConfigurationSettings.reset()">Reset</forms:button>
                             </c:if>
                         </td>

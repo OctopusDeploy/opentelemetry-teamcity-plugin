@@ -45,9 +45,7 @@ public class BuildStorageManagerImpl implements BuildStorageManager {
         File pluginFile = new File(artifactsDir, jetbrains.buildServer.ArtifactsConstants.TEAMCITY_ARTIFACTS_DIR + File.separatorChar + OTEL_TRACE_ID_FILENAME);
         Loggers.SERVER.debug(String.format("OTEL_PLUGIN: Saving trace id %s to %s for build %d.", traceId, OTEL_TRACE_ID_FILENAME, build.getBuildId()));
         try (FileWriter fileWriter = new FileWriter(pluginFile)) {
-            if (pluginFile.createNewFile()){
-                fileWriter.write(traceId);
-            }
+            fileWriter.write(traceId);
         } catch (IOException e) {
             Loggers.SERVER.warn(String.format("OTEL_PLUGIN: Error trying to save trace id for build %d.", build.getBuildId()));
         }

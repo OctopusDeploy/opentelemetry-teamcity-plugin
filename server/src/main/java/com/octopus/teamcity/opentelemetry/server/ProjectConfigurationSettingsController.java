@@ -55,6 +55,9 @@ public class ProjectConfigurationSettingsController extends BaseFormXmlControlle
             return;
         }
 
+        //todo: tell the OTELHelperFactory that project settings have changed.
+        //      this would allow us to change the factory to cache based on project, rather than on build
+
         var feature = project.getOwnFeaturesOfType(PLUGIN_NAME);
         if (settingsRequest.mode.equals("reset")) {
             if (!feature.isEmpty()) {

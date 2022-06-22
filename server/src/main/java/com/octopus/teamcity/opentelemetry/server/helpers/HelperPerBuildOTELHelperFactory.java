@@ -1,5 +1,6 @@
 package com.octopus.teamcity.opentelemetry.server.helpers;
 
+import com.octopus.teamcity.opentelemetry.server.OTELService;
 import jetbrains.buildServer.log.Loggers;
 import jetbrains.buildServer.serverSide.BuildPromotion;
 import jetbrains.buildServer.serverSide.ProjectManager;
@@ -43,7 +44,7 @@ public class HelperPerBuildOTELHelperFactory implements OTELHelperFactory {
                 if (params.get(PROPERTY_KEY_ENABLED).equals("true")) {
                     var endpoint = params.get(PROPERTY_KEY_ENDPOINT);
                     Map<String, String> headers = new HashMap<>();
-                    if (params.get(PROPERTY_KEY_SERVICE).equals("honeycomb.io")) {
+                    if (params.get(PROPERTY_KEY_SERVICE).equals(OTELService.HONEYCOMB.getValue())) {
                         headers.put("x-honeycomb-dataset", params.get(PROPERTY_KEY_HONEYCOMB_DATASET));
                         headers.put("x-honeycomb-team", EncryptUtil.unscramble(params.get(PROPERTY_KEY_HONEYCOMB_APIKEY)));
                     } else {

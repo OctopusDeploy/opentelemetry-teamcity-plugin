@@ -13,9 +13,7 @@ import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.File;
 import java.util.Date;
-import java.util.Scanner;
 import java.util.logging.Logger;
 
 import static com.octopus.teamcity.opentelemetry.common.PluginConstants.*;
@@ -27,7 +25,7 @@ public class BuildOverviewExtensionController extends BaseController
     private final SBuildServer sBuildServer;
     private final ProjectManager projectManager;
     private final PluginDescriptor pluginDescriptor;
-    private BuildStorageManager buildStorageManager;
+    private final BuildStorageManager buildStorageManager;
 
     public BuildOverviewExtensionController(
             @NotNull PagePlaces pagePlaces,
@@ -92,7 +90,7 @@ public class BuildOverviewExtensionController extends BaseController
                 if (!params.get(PROPERTY_KEY_ENABLED).equals("true"))
                     return null;
 
-                if (!params.get(PROPERTY_KEY_SERVICE).equals("honeycomb.io"))
+                if (!params.get(PROPERTY_KEY_SERVICE).equals(OTELService.HONEYCOMB.getValue()))
                     return null;
 
                 var traceId = buildStorageManager.getTraceId(build);

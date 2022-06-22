@@ -16,6 +16,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Optional;
 
 import static com.octopus.teamcity.opentelemetry.common.PluginConstants.*;
 
@@ -59,7 +60,7 @@ public class ProjectConfigurationSettingsController extends BaseFormXmlControlle
         //      this would allow us to change the factory to cache based on project, rather than on build
 
         var feature = project.getOwnFeaturesOfType(PLUGIN_NAME);
-        if (settingsRequest.mode.equals("reset")) {
+        if (settingsRequest.mode.isPresent() &&  settingsRequest.mode.get().equals(SaveMode.RESET)) {
             if (!feature.isEmpty()) {
                 project.removeFeature(feature.stream().findFirst().get().getId());
                 project.persist();
@@ -84,9 +85,9 @@ public class ProjectConfigurationSettingsController extends BaseFormXmlControlle
 
     class SetProjectConfigurationSettingsRequest {
         private final String enabled;
-        private final String service; //todo: change to an enum
+        private final Optional<OTELService> service;
         private final String endpoint;
-        private final String mode; //todo: change to enum
+        private final Optional<SaveMode> mode;
         private final String honeycombTeam;
         private final String honeycombDataset;
         private final String honeycombApiKey;
@@ -94,9 +95,9 @@ public class ProjectConfigurationSettingsController extends BaseFormXmlControlle
 
         public SetProjectConfigurationSettingsRequest(HttpServletRequest request) {
             this.enabled = request.getParameter("enabled");
-            this.service = request.getParameter("service");
+            this.service = OTELService.get(request.getParameter("service"));
             this.endpoint = request.getParameter("endpoint");
-            this.mode = request.getParameter("mode");
+            this.mode = SaveMode.get(request.getParameter("mode"));
             this.honeycombTeam = request.getParameter("honeycombTeam");
             this.honeycombDataset = request.getParameter("honeycombDataset");
             this.honeycombApiKey = RSACipher.decryptWebRequestData(request.getParameter("encryptedHoneycombApiKey"));
@@ -118,25 +119,29 @@ public class ProjectConfigurationSettingsController extends BaseFormXmlControlle
         }
 
         public boolean validate(@NotNull ActionErrors errors) {
-            if (StringUtil.isEmptyOrSpaces(this.mode))
+            if (!this.mode.isPresent())
                 errors.addError("mode", "Mode must be set!");
-            if (!this.mode.equals("reset") && !this.mode.equals("save"))
-                errors.addError("mode", "Mode must be set to either 'reset' or 'save'!");
-            if (this.mode.equals("reset"))
-                return true; //short circuit the rest of the validation - all related to "save"
+            else {
+                if (!this.mode.get().equals(SaveMode.RESET) && !this.mode.get().equals(SaveMode.SAVE))
+                    errors.addError("mode", "Mode must be set to either 'reset' or 'save'!");
+                if (this.mode.get().equals(SaveMode.RESET))
+                    return true; //short circuit the rest of the validation - all related to "save"
+            }
 
-            if (StringUtil.isEmptyOrSpaces(this.service))
+            if (!this.service.isPresent())
                 errors.addError("service", "Service must be set!");
-            if (!this.service.equals("honeycomb.io") && !this.service.equals("custom"))
-                errors.addError("service", "Service must be set to either 'honeycomb.io' or 'custom'!");
+            else {
+                if (!this.service.get().equals(OTELService.HONEYCOMB) && !this.service.get().equals(OTELService.CUSTOM))
+                    errors.addError("service", "Service must be set to either 'honeycomb.io' or 'custom'!");
 
-            if (!this.service.equals("honeycomb.io")) {
-                if (StringUtil.isEmptyOrSpaces(this.honeycombTeam))
-                    errors.addError("honeycombTeam", "Team must be set!");
-                if (StringUtil.isEmptyOrSpaces(this.honeycombDataset))
-                    errors.addError("honeycombDataset", "Dataset must be set!");
-                if (StringUtil.isEmptyOrSpaces(this.honeycombApiKey))
-                    errors.addError("honeycombApiKey", "ApiKey must be set!");
+                if (!this.service.get().equals(OTELService.HONEYCOMB)) {
+                    if (StringUtil.isEmptyOrSpaces(this.honeycombTeam))
+                        errors.addError("honeycombTeam", "Team must be set!");
+                    if (StringUtil.isEmptyOrSpaces(this.honeycombDataset))
+                        errors.addError("honeycombDataset", "Dataset must be set!");
+                    if (StringUtil.isEmptyOrSpaces(this.honeycombApiKey))
+                        errors.addError("honeycombApiKey", "ApiKey must be set!");
+                }
             }
 
             if (StringUtil.isEmptyOrSpaces(this.endpoint)) {
@@ -158,9 +163,13 @@ public class ProjectConfigurationSettingsController extends BaseFormXmlControlle
         public HashMap<String, String> AsParams() {
             var params = new HashMap<String, String>();
             params.put(PROPERTY_KEY_ENABLED, enabled);
-            params.put(PROPERTY_KEY_SERVICE, service);
+            if (service.isPresent())
+                params.put(PROPERTY_KEY_SERVICE, service.get().getValue());
+            else
+                params.put(PROPERTY_KEY_SERVICE, OTELService.HONEYCOMB.getValue());
+
             params.put(PROPERTY_KEY_ENDPOINT, endpoint);
-            if (service.equals("honeycomb.io")) {
+            if (!service.isPresent() || service.get().equals(OTELService.HONEYCOMB)) {
                 params.put(PROPERTY_KEY_HONEYCOMB_DATASET, honeycombDataset);
                 params.put(PROPERTY_KEY_HONEYCOMB_TEAM, honeycombTeam);
                 params.put(PROPERTY_KEY_HONEYCOMB_APIKEY, EncryptUtil.scramble(honeycombApiKey));

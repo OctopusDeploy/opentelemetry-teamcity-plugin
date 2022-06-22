@@ -18,11 +18,21 @@ From the [OpenTelemetry docs](https://opentelemetry.io/docs/):
 ### Installing the plugin to TeamCity
 
 1. Build the plugin using the "Building" instructions below.
-2. In your TeamCity instance go to Administration -> Diagnostics -> Internal Properties.
-    1. Ensure you update add a property `octopus.teamcity.opentelemetry.plugin.endpoint=<your_opentelemetry_collector_endpoint>`
-    2. Ensure you update add a property `octopus.teamcity.opentelemetry.plugin.headers=<your_opentelemetry_collector_endpoint_headers>`. Separate each key value pair with `=`, and separate each header with a `,`.
-3. Alternatively open the `internal.properties` file location in your TeamCity instance `data_dir/config` folder and update the above properties.
-4. Install the .zip using your TeamCity instance UI via Administration -> Plugins -> Upload. Restart if required.
+2. In your TeamCity instance go to the configuration settings for the project which you want to start sending data for (the root project is a good candidate for sending everything!), and choose `OpenTelemetry` in the left menu
+3. Tick Enable, and enter the required settings
+   1. If you are using honeycomb.io, use the following settings:
+      1. Service: `Honeycomb.io`
+      2. Team: Your team name from honeycomb (as shown in the browser url)
+      3. Dataset: The dataset you want to send data to
+      4. Headers:
+         1. `x-honeycomb-dataset`: The dataset you want to send data to
+         2. `x-honeycomb-team`: The honeycomb.io api key
+   2. If you are using another service, use the following settings:
+      1. Service: `Custom`
+      2. Endpoint: The url of the service
+      3. Headers: The service specific headers required
+4. Note that settings are inherited and can be overridden by child project settings
+5. Install the .zip using your TeamCity instance UI via Administration -> Plugins -> Upload. Restart if required.
 
 ## Local Development
 

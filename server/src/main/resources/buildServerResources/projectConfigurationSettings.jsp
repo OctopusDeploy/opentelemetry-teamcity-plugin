@@ -58,6 +58,13 @@
                     </td>
                 </tr>
                 <tr <c:if test='${otelService != "honeycomb.io"}'>style="display: none"</c:if>>
+                    <th><label for="honeycombApiKey">API Key:&nbsp;<span class="mandatoryAsterix" title="Mandatory field">*</span></label></th>
+                    <td>
+                        <forms:passwordField className="textField longField" name="honeycombApiKey" id="honeycombApiKey" encryptedPassword="${otelHoneycombApiKey}"/>
+                        <span class="error" id="error_honeycombApiKey"></span>
+                    </td>
+                </tr>
+                <tr <c:if test='${otelService != "honeycomb.io"}'>style="display: none"</c:if>>
                     <th><label for="honeycombTeam">Team:&nbsp;<span class="mandatoryAsterix" title="Mandatory field">*</span></label></th>
                     <td>
                         <input type="text" name="honeycombTeam" id="honeycombTeam" value="${otelHoneycombTeam}" class="textField longField">
@@ -71,7 +78,7 @@
                         <span class="error" id="error_honeycombDataset"></span>
                     </td>
                 </tr>
-                <tr>
+                <tr id="customHeaders" <c:if test='${otelService == "honeycomb.io"}'>style="display: none"</c:if>>
                     <th><label>Headers:</label></th>
                     <td>
                         <table class="highlightable parametersTable">
@@ -130,5 +137,8 @@
             </div>
         </form>
     </div>
+<script>
+    BS.ProjectConfigurationSettings.serviceChanged($j('#service'));
+</script>
 </body>
 </html>

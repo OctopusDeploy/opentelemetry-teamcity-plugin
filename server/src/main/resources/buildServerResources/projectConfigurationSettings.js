@@ -35,17 +35,19 @@ BS.ProjectConfigurationSettings = OO.extend(BS.PluginPropertiesForm, OO.extend(B
     },
 
     serviceChanged: function(dropdown) {
-        //todo: if honeycomb, show an api key field, and hide the headers (as we're currently asking them to enter dataset twice)
-        //      update the readme when we do
         if ($j(dropdown).val() === 'honeycomb.io') {
             $j('#endpoint').val('https://api.honeycomb.io:443');
             $j('#endpoint').closest('tr').hide();
+            $j('#customHeaders').closest('tr').hide();
             $j('#honeycombTeam').closest('tr').show();
             $j('#honeycombDataset').closest('tr').show();
+            $j('#honeycombApiKey').closest('tr').show();
         } else {
             $j('#endpoint').closest('tr').show();
+            $j('#customHeaders').closest('tr').show();
             $j('#honeycombTeam').closest('tr').hide();
             $j('#honeycombDataset').closest('tr').hide();
+            $j('#honeycombApiKey').closest('tr').hide();
         }
     },
 

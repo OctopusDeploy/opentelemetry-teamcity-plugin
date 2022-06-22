@@ -41,6 +41,7 @@ public class ProjectConfigurationTab extends EditProjectTab {
         SProject project = getProject(request);
 
         var features = project.getAvailableFeaturesOfType(PLUGIN_NAME);
+        model.put("publicKey", RSACipher.getHexEncodedPublicKey());
 
         if ((long) features.size() == 0) {
             model.put("isEnabled", false);
@@ -67,12 +68,13 @@ public class ProjectConfigurationTab extends EditProjectTab {
             model.put("otelEndpoint", params.get(PROPERTY_KEY_ENDPOINT));
             model.put("otelHoneycombTeam", params.get(PROPERTY_KEY_HONEYCOMB_TEAM));
             model.put("otelHoneycombDataset", params.get(PROPERTY_KEY_HONEYCOMB_DATASET));
+            model.put("otelHoneycombApiKey", RSACipher.encryptDataForWeb(EncryptUtil.unscramble(params.get(PROPERTY_KEY_HONEYCOMB_APIKEY))));
 
             var headers = new ArrayList<HeaderDto>();
             params.forEach((k,v)->{
                 if (k.startsWith(PROPERTY_KEY_HEADERS)) {
                     var key = k.substring(PROPERTY_KEY_HEADERS.length());
-                    key = key.substring(1, key.length() - 1);;
+                    key = key.substring(1, key.length() - 1);
                     var header = new HeaderDto(key,
                             EncryptUtil.isScrambled(v) ? EncryptUtil.unscramble(v) : v,
                             EncryptUtil.isScrambled(v) ? "password" : "plaintext");
@@ -81,7 +83,6 @@ public class ProjectConfigurationTab extends EditProjectTab {
             });
 
             model.put("otelHeaders", headers);
-            model.put("publicKey", RSACipher.getHexEncodedPublicKey());
         }
     }
 

@@ -43,14 +43,19 @@ public class HelperPerBuildOTELHelperFactory implements OTELHelperFactory {
                 if (params.get(PROPERTY_KEY_ENABLED).equals("true")) {
                     var endpoint = params.get(PROPERTY_KEY_ENDPOINT);
                     Map<String, String> headers = new HashMap<>();
-                    params.forEach((k, v) -> {
-                        if (k.startsWith(PROPERTY_KEY_HEADERS)) {
-                            var name = k.substring(PROPERTY_KEY_HEADERS.length());
-                            name = name.substring(1, name.length() - 1);
-                            var value = EncryptUtil.isScrambled(v) ? EncryptUtil.unscramble(v) : v;
-                            headers.put(name, value);
-                        }
-                    });
+                    if (params.get(PROPERTY_KEY_SERVICE).equals("honeycomb.io")) {
+                        headers.put("x-honeycomb-dataset", params.get(PROPERTY_KEY_HONEYCOMB_DATASET));
+                        headers.put("x-honeycomb-team", EncryptUtil.unscramble(params.get(PROPERTY_KEY_HONEYCOMB_APIKEY)));
+                    } else {
+                        params.forEach((k, v) -> {
+                            if (k.startsWith(PROPERTY_KEY_HEADERS)) {
+                                var name = k.substring(PROPERTY_KEY_HEADERS.length());
+                                name = name.substring(1, name.length() - 1);
+                                var value = EncryptUtil.isScrambled(v) ? EncryptUtil.unscramble(v) : v;
+                                headers.put(name, value);
+                            }
+                        });
+                    }
                     long startTime = System.nanoTime();
                     var otelHelper = new OTELHelperImpl(headers, endpoint);
                     long endTime = System.nanoTime();

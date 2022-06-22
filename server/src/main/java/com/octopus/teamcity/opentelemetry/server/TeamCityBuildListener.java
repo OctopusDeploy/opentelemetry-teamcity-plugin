@@ -53,10 +53,10 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     @Override
     public void buildStarted(@NotNull SRunningBuild build) {
         Loggers.SERVER.debug(String.format("OTEL_PLUGIN: Build started method triggered for %s, id %d", getBuildName(build), build.getBuildId()));
-        if (buildListenerReady(build)) {
-            var parentBuild = getRootBuildInChain(build);
+        var parentBuild = getRootBuildInChain(build);
+        var otelHelper = otelHelperFactory.getOTELHelper(parentBuild);
+        if (otelHelper.isReady()) {
             var parentBuildId = parentBuild.getId();
-            var otelHelper = otelHelperFactory.getOTELHelper(parentBuild);
             Loggers.SERVER.debug(String.format("OTEL_PLUGIN: Root build of build id %d is %d", build.getBuildId(), parentBuildId));
 
             Span parentSpan = otelHelper.getParentSpan(String.valueOf(parentBuildId));
@@ -80,12 +80,6 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         } else {
             Loggers.SERVER.info(String.format("OTEL_PLUGIN: Build start triggered for %s, id %d and plugin not ready. This build will not be traced.", getBuildName(build), build.getBuildId()));
         }
-    }
-
-    private boolean buildListenerReady(SRunningBuild build) {
-        var parentBuild = getRootBuildInChain(build);
-        var helper = otelHelperFactory.getOTELHelper(parentBuild);
-        return helper.isReady();
     }
 
     private String getBuildId(SRunningBuild build) {
@@ -128,56 +122,56 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     public void buildFinished(@NotNull SRunningBuild build) {
         Loggers.SERVER.debug(String.format("OTEL_PLUGIN: Build finished method triggered for %s", getBuildId(build)));
         super.buildFinished(build);
-        if (buildListenerReady(build)) {
-            buildFinishedOrInterrupted(build);
-        }
+        buildFinishedOrInterrupted(build);
     }
 
     @Override
     public void buildInterrupted(@NotNull SRunningBuild build) {
         Loggers.SERVER.debug(String.format("OTEL_PLUGIN: Build interrupted method triggered for %s", getBuildId(build)));
         super.buildInterrupted(build);
-        if (buildListenerReady(build)) {
-            buildFinishedOrInterrupted(build);
-        }
+        buildFinishedOrInterrupted(build);
     }
 
     private void buildFinishedOrInterrupted (SRunningBuild build) {
         BuildStatistics buildStatistics = build.getBuildStatistics(
                 BuildStatisticsOptions.ALL_TESTS_NO_DETAILS);
-        var otelHelper = otelHelperFactory.getOTELHelper(getRootBuildInChain(build));
+        var parentBuild = getRootBuildInChain(build);
+        var otelHelper = otelHelperFactory.getOTELHelper(parentBuild);
+        if (otelHelper.isReady()) {
+            if (otelHelper.getSpan(getBuildId(build)) != null) {
+                Span span = otelHelper.getSpan(getBuildId(build));
+                Loggers.SERVER.debug("OTEL_PLUGIN: Build finished and span found for " + getBuildName(build));
+                try (Scope ignored = span.makeCurrent()) {
+                    createQueuedEventsSpans(build, span);
+                    createBuildStepSpans(build, span);
+                    setArtifactAttributes(build, span);
 
-        if(otelHelper.getSpan(getBuildId(build)) != null) {
-            Span span = otelHelper.getSpan(getBuildId(build));
-            Loggers.SERVER.debug("OTEL_PLUGIN: Build finished and span found for " + getBuildName(build));
-            try (Scope ignored = span.makeCurrent()){
-                createQueuedEventsSpans(build, span);
-                createBuildStepSpans(build, span);
-                setArtifactAttributes(build, span);
-
-                otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_SUCCESS_STATUS, build.getBuildStatus().isSuccessful());
-                otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_FAILED_TEST_COUNT, buildStatistics.getFailedTestCount());
-                otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_PROBLEMS_COUNT, buildStatistics.getCompilationErrorsCount());
-                if (this.checkoutTimeMap.containsKey(span.getSpanContext().getSpanId())) {
-                    otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_CHECKOUT_TIME, this.checkoutTimeMap.get(span.getSpanContext().getSpanId()));
-                    this.checkoutTimeMap.remove(span.getSpanContext().getSpanId());
+                    otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_SUCCESS_STATUS, build.getBuildStatus().isSuccessful());
+                    otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_FAILED_TEST_COUNT, buildStatistics.getFailedTestCount());
+                    otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_PROBLEMS_COUNT, buildStatistics.getCompilationErrorsCount());
+                    if (this.checkoutTimeMap.containsKey(span.getSpanContext().getSpanId())) {
+                        otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_CHECKOUT_TIME, this.checkoutTimeMap.get(span.getSpanContext().getSpanId()));
+                        this.checkoutTimeMap.remove(span.getSpanContext().getSpanId());
+                    }
+                    span.addEvent(PluginConstants.EVENT_FINISHED);
+                    Loggers.SERVER.debug("OTEL_PLUGIN: " + PluginConstants.EVENT_FINISHED + " event added to span for build " + getBuildName(build));
+                } catch (Exception e) {
+                    Loggers.SERVER.error("OTEL_PLUGIN: Exception in Build Finish caused by: " + e + e.getCause() +
+                            ", with message: " + e.getMessage() +
+                            ", and stacktrace: " + Arrays.toString(e.getStackTrace()));
+                    span.setStatus(StatusCode.ERROR, PluginConstants.EXCEPTION_ERROR_MESSAGE_DURING_BUILD_FINISH + ": " + e.getMessage());
+                } finally {
+                    span.end();
+                    var buildId = getBuildId(build);
+                    otelHelper.removeSpan(buildId);
+                    if (buildId.equals(String.valueOf(getRootBuildInChain(build))))
+                        otelHelperFactory.release(build.getBuildId());
                 }
-                span.addEvent(PluginConstants.EVENT_FINISHED);
-                Loggers.SERVER.debug("OTEL_PLUGIN: " + PluginConstants.EVENT_FINISHED + " event added to span for build " + getBuildName(build));
-            } catch (Exception e) {
-                Loggers.SERVER.error("OTEL_PLUGIN: Exception in Build Finish caused by: " + e + e.getCause() +
-                        ", with message: " + e.getMessage() +
-                        ", and stacktrace: " + Arrays.toString(e.getStackTrace()));
-                span.setStatus(StatusCode.ERROR, PluginConstants.EXCEPTION_ERROR_MESSAGE_DURING_BUILD_FINISH + ": " + e.getMessage());
-            } finally {
-                span.end();
-                var buildId = getBuildId(build);
-                otelHelper.removeSpan(buildId);
-                if (buildId.equals(String.valueOf(getRootBuildInChain(build))))
-                    otelHelperFactory.release(build.getBuildId());
+            } else {
+                Loggers.SERVER.warn("OTEL_PLUGIN: Build end triggered but span not found for build " + getBuildName(build));
             }
         } else {
-            Loggers.SERVER.warn("OTEL_PLUGIN: Build end triggered but span not found for build " + getBuildName(build));
+            Loggers.SERVER.warn(String.format("OTEL_PLUGIN: Build finished (or interrupted) for %s, id %d and plugin not ready.", getBuildName(build), build.getBuildId()));
         }
     }
 

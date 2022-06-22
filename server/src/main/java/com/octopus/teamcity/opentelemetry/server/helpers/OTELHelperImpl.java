@@ -29,10 +29,9 @@ public class OTELHelperImpl implements OTELHelper {
     private final OpenTelemetry openTelemetry;
     private final Tracer tracer;
     private final ConcurrentHashMap<String, Span> spanMap;
-    private final SpanProcessor spanProcessor;
 
     public OTELHelperImpl(Map<String, String> headers, String exporterEndpoint) {
-        this.spanProcessor = buildSpanProcessor(headers, exporterEndpoint);
+        var spanProcessor = buildSpanProcessor(headers, exporterEndpoint);
 
         Resource serviceNameResource = Resource
                 .create(Attributes.of(ResourceAttributes.SERVICE_NAME, PluginConstants.SERVICE_NAME));
@@ -96,11 +95,5 @@ public class OTELHelperImpl implements OTELHelper {
     public void addAttributeToSpan(Span span, String attributeName, Object attributeValue) {
         Loggers.SERVER.debug("OTEL_PLUGIN: Adding attribute to span " + attributeName + "=" + attributeValue);
         span.setAttribute(attributeName, attributeValue.toString());
-    }
-
-    @Override
-    public void release() {
-        spanProcessor.forceFlush();
-        spanProcessor.close();
     }
 }

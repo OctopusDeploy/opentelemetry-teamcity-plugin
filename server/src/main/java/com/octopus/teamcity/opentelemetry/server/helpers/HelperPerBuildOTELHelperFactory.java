@@ -68,8 +68,6 @@ public class HelperPerBuildOTELHelperFactory implements OTELHelperFactory {
 
     @Override
     public void release(Long buildId) {
-        if (otelHelpers.containsKey(buildId))
-            otelHelpers.get(buildId).release();
         otelHelpers.remove(buildId);
     }
 }

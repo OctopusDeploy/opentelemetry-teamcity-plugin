@@ -67,9 +67,7 @@ You must have a TeamCity instance running. To run a TeamCity instance locally:
 5. Open localhost:8111 in a browser.
 6. On your first run create an admin login (this setup only needs to take place once due to the configuration mount). Once the server starts up, navigate to Agents->Unauthorized and authorise the agent that was started in a container alongside the server.
 7. (Optional) If attaching a remote debugger run in your TeamCity directory `export TEAMCITY_SERVER_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8111 && $SCRIPT_PATH/bin/teamcity-server.sh run` for the server and `export TEAMCITY_SERVER_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8111 && $SCRIPT_PATH/buildAgent/bin/agent.sh run` for the default agent.
-8. In your TeamCity instance go to Administration -> Diagnostics -> Internal Properties.
-   1. Ensure you update add a property `octopus.teamcity.opentelemetry.plugin.endpoint=<your_opentelemetry_collector_endpoint>`
-   2. Ensure you update add a property `octopus.teamcity.opentelemetry.plugin.headers=<your_opentelemetry_collector_endpoint_required_headers>`. Separate each key value pair with `=`, and separate each header with a `,`.
+8. Configure the settings as per `Installing the plugin to TeamCity` above.
 9. To stop the TeamCity server and agent from running, in a separate terminal cd to your TeamCity directory and run `./bin/runAll.sh stop`
 
 ### Building

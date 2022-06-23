@@ -1,32 +1,26 @@
 package com.octopus.teamcity.opentelemetry.server.helpers;
 
 import com.octopus.teamcity.opentelemetry.server.OTELService;
-import jetbrains.buildServer.log.Loggers;
 import jetbrains.buildServer.serverSide.BuildPromotion;
 import jetbrains.buildServer.serverSide.ProjectManager;
-import jetbrains.buildServer.serverSide.SBuildServer;
 import jetbrains.buildServer.serverSide.crypt.EncryptUtil;
-
-import java.util.Collections;
+import org.apache.log4j.Logger;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static com.octopus.teamcity.opentelemetry.common.PluginConstants.*;
 
 public class HelperPerBuildOTELHelperFactory implements OTELHelperFactory {
-    private final Map<Long, OTELHelper> otelHelpers;
+    private final ConcurrentHashMap<Long, OTELHelper> otelHelpers;
     private final ProjectManager projectManager;
-    private final SBuildServer sBuildServer;
 
     public HelperPerBuildOTELHelperFactory(
-            ProjectManager projectManager,
-            SBuildServer sBuildServer
     ) {
         this.projectManager = projectManager;
-        this.sBuildServer = sBuildServer;
         Loggers.SERVER.debug("OTEL_PLUGIN: Creating HelperPerBuildOTELHelperFactory.");
 
-        this.otelHelpers = Collections.synchronizedMap(new HashMap<>());
+        this.otelHelpers = new ConcurrentHashMap<>();
     }
 
     public OTELHelper getOTELHelper(BuildPromotion build) {

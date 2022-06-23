@@ -1,5 +1,8 @@
 package com.octopus.teamcity.opentelemetry.server;
 
+import com.octopus.teamcity.opentelemetry.server.helpers.OTELHelper;
+import com.octopus.teamcity.opentelemetry.server.helpers.OTELHelperFactory;
+import com.octopus.teamcity.opentelemetry.server.helpers.OTELHelperImpl;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import jetbrains.buildServer.serverSide.BuildPromotion;
@@ -12,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -23,6 +27,7 @@ class TeamCityBuildListenerTest {
 
     private OTELHelper otelHelper;
     private TeamCityBuildListener buildListener;
+    private OTELHelperFactory factory;
 
     @BeforeEach
     void setUp(@Mock EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher) {
@@ -32,13 +37,12 @@ class TeamCityBuildListenerTest {
             put("testHeader2", "testHeaderValue2");
         }};
         GlobalOpenTelemetry.resetForTest();
-        this.otelHelper = new OTELHelper(HEADERS, ENDPOINT);
-        this.buildListener = new TeamCityBuildListener(buildServerListenerEventDispatcher, otelHelper);
-    }
+        this.otelHelper = new OTELHelperImpl(HEADERS, ENDPOINT);
+        this.factory = mock(OTELHelperFactory.class, RETURNS_DEEP_STUBS);
 
-    @Test
-    void illegalStateExceptionWhenHeadersEmpty(@Mock EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher) {
-        assertThrows(IllegalStateException.class,() -> new TeamCityBuildListener(buildServerListenerEventDispatcher));
+        var buildStorageManager = mock(BuildStorageManager.class, RETURNS_DEEP_STUBS);
+
+        this.buildListener = new TeamCityBuildListener(buildServerListenerEventDispatcher, factory, buildStorageManager);
     }
 
     @Test
@@ -53,6 +57,7 @@ class TeamCityBuildListenerTest {
         // Stubbing this method to return the build if there is no parent, as this is the behaviour of TeamCity
         BuildPromotion[] buildPromotions = new BuildPromotion[]{build.getBuildPromotion()};
         when(build.getBuildPromotion().findTops()).thenReturn(buildPromotions);
+        when(factory.getOTELHelper(Arrays.stream(buildPromotions).findFirst().get())).thenReturn(otelHelper);
 
         // Act
         this.buildListener.buildStarted(build);
@@ -92,6 +97,7 @@ class TeamCityBuildListenerTest {
         // Stubbing this method to return the build if there is no parent, this is the behaviour of TeamCity
         BuildPromotion[] buildPromotions = new BuildPromotion[]{build.getBuildPromotion()};
         when(build.getBuildPromotion().findTops()).thenReturn(buildPromotions);
+        when(factory.getOTELHelper(Arrays.stream(buildPromotions).findFirst().get())).thenReturn(otelHelper);
         this.buildListener.buildStarted(build);
         assertNotNull(this.otelHelper.getSpan(String.valueOf(build.getBuildId())));
 

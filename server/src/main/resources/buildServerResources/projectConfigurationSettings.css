@@ -1,0 +1,7 @@
+.editSettingsPage {
+    width:800px;
+}
+
+.editSettingsPage > td {
+    white-space: nowrap;
+}

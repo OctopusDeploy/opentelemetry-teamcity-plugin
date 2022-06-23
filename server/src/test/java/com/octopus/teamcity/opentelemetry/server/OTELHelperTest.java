@@ -1,5 +1,7 @@
 package com.octopus.teamcity.opentelemetry.server;
 
+import com.octopus.teamcity.opentelemetry.server.helpers.OTELHelper;
+import com.octopus.teamcity.opentelemetry.server.helpers.OTELHelperImpl;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
@@ -35,7 +37,7 @@ class OTELHelperTest {
             put("testHeader2", "testHeaderValue2");
         }};
         GlobalOpenTelemetry.resetForTest();
-        this.otelHelper = new OTELHelper(HEADERS, ENDPOINT);
+        this.otelHelper = new OTELHelperImpl(HEADERS, ENDPOINT);
     }
 
 

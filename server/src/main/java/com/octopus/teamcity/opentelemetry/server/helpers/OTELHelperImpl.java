@@ -1,6 +1,7 @@
-package com.octopus.teamcity.opentelemetry.server;
+package com.octopus.teamcity.opentelemetry.server.helpers;
 
 import com.octopus.teamcity.opentelemetry.common.PluginConstants;
+import com.octopus.teamcity.opentelemetry.server.LogMasker;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.Span;
@@ -23,14 +24,14 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-public class OTELHelper {
+public class OTELHelperImpl implements OTELHelper {
 
     private final OpenTelemetry openTelemetry;
     private final Tracer tracer;
     private final ConcurrentHashMap<String, Span> spanMap;
 
-    public OTELHelper(Map<String, String> headers, String exporterEndpoint) {
-        SpanProcessor spanProcessor = buildSpanProcessor(headers, exporterEndpoint);
+    public OTELHelperImpl(Map<String, String> headers, String exporterEndpoint) {
+        var spanProcessor = buildSpanProcessor(headers, exporterEndpoint);
 
         Resource serviceNameResource = Resource
                 .create(Attributes.of(ResourceAttributes.SERVICE_NAME, PluginConstants.SERVICE_NAME));
@@ -41,7 +42,7 @@ public class OTELHelper {
         this.openTelemetry = OpenTelemetrySdk.builder()
                 .setTracerProvider(sdkTracerProvider)
                 .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
-                .buildAndRegisterGlobal();
+                .build();
         Loggers.SERVER.info("OTEL_PLUGIN: OpenTelemetry plugin started.");
         this.tracer = this.openTelemetry.getTracer(PluginConstants.TRACER_INSTRUMENTATION_NAME);
         this.spanMap = new ConcurrentHashMap<>();
@@ -59,31 +60,38 @@ public class OTELHelper {
         return BatchSpanProcessor.builder(spanExporter).build();
     }
 
+    @Override
     public boolean isReady() {
         return this.openTelemetry != null && this.tracer != null && this.spanMap != null;
     }
 
+    @Override
     public Span getParentSpan(String buildId) {
         return this.spanMap.computeIfAbsent(buildId, key -> this.tracer.spanBuilder(buildId).startSpan());
     }
 
+    @Override
     public Span createSpan(String spanName, Span parentSpan) {
         Loggers.SERVER.info("OTEL_PLUGIN: Creating child span " + spanName + " under parent " + parentSpan);
         return this.spanMap.computeIfAbsent(spanName, key -> this.tracer.spanBuilder(spanName).setParent(Context.current().with(parentSpan)).startSpan());
     }
 
+    @Override
     public Span createTransientSpan(String spanName, Span parentSpan, long startTime) {
         return this.tracer.spanBuilder(spanName).setParent(Context.current().with(parentSpan)).setStartTimestamp(startTime, TimeUnit.MILLISECONDS).startSpan();
     }
 
+    @Override
     public void removeSpan(String buildId) {
         this.spanMap.remove(buildId);
     }
 
+    @Override
     public Span getSpan(String buildId) {
         return this.spanMap.get(buildId);
     }
 
+    @Override
     public void addAttributeToSpan(Span span, String attributeName, Object attributeValue) {
         Loggers.SERVER.debug("OTEL_PLUGIN: Adding attribute to span " + attributeName + "=" + attributeValue);
         span.setAttribute(attributeName, attributeValue.toString());

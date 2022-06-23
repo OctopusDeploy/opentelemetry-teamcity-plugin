@@ -18,11 +18,19 @@ From the [OpenTelemetry docs](https://opentelemetry.io/docs/):
 ### Installing the plugin to TeamCity
 
 1. Build the plugin using the "Building" instructions below.
-2. In your TeamCity instance go to Administration -> Diagnostics -> Internal Properties.
-    1. Ensure you update add a property `octopus.teamcity.opentelemetry.plugin.endpoint=<your_opentelemetry_collector_endpoint>`
-    2. Ensure you update add a property `octopus.teamcity.opentelemetry.plugin.headers=<your_opentelemetry_collector_endpoint_headers>`. Separate each key value pair with `=`, and separate each header with a `,`.
-3. Alternatively open the `internal.properties` file location in your TeamCity instance `data_dir/config` folder and update the above properties.
-4. Install the .zip using your TeamCity instance UI via Administration -> Plugins -> Upload. Restart if required.
+2. In your TeamCity instance go to the configuration settings for the project which you want to start sending data for (the root project is a good candidate for sending everything!), and choose `OpenTelemetry` in the left menu
+3. Tick Enable, and enter the required settings
+   1. If you are using honeycomb.io, use the following settings:
+      1. Service: `Honeycomb.io`
+      2. Api Key: The honeycomb.io api key
+      2. Team: Your team name from honeycomb (as shown in the browser url)
+      3. Dataset: The dataset you want to send data to
+   2. If you are using another service, use the following settings:
+      1. Service: `Custom`
+      2. Endpoint: The url of the service
+      3. Headers: The service specific headers required
+4. Note that settings are inherited and can be overridden by child project settings
+5. Install the .zip using your TeamCity instance UI via Administration -> Plugins -> Upload. Restart if required.
 
 ## Local Development
 
@@ -59,9 +67,7 @@ You must have a TeamCity instance running. To run a TeamCity instance locally:
 5. Open localhost:8111 in a browser.
 6. On your first run create an admin login (this setup only needs to take place once due to the configuration mount). Once the server starts up, navigate to Agents->Unauthorized and authorise the agent that was started in a container alongside the server.
 7. (Optional) If attaching a remote debugger run in your TeamCity directory `export TEAMCITY_SERVER_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8111 && $SCRIPT_PATH/bin/teamcity-server.sh run` for the server and `export TEAMCITY_SERVER_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8111 && $SCRIPT_PATH/buildAgent/bin/agent.sh run` for the default agent.
-8. In your TeamCity instance go to Administration -> Diagnostics -> Internal Properties.
-   1. Ensure you update add a property `octopus.teamcity.opentelemetry.plugin.endpoint=<your_opentelemetry_collector_endpoint>`
-   2. Ensure you update add a property `octopus.teamcity.opentelemetry.plugin.headers=<your_opentelemetry_collector_endpoint_required_headers>`. Separate each key value pair with `=`, and separate each header with a `,`.
+8. Configure the settings as per `Installing the plugin to TeamCity` above.
 9. To stop the TeamCity server and agent from running, in a separate terminal cd to your TeamCity directory and run `./bin/runAll.sh stop`
 
 ### Building

@@ -9,6 +9,7 @@ import jetbrains.buildServer.serverSide.crypt.EncryptUtil;
 import jetbrains.buildServer.serverSide.crypt.RSACipher;
 import jetbrains.buildServer.util.StringUtil;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
+import org.apache.log4j.Logger;
 import org.jdom.Element;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.web.servlet.ModelAndView;
@@ -23,6 +24,7 @@ import static com.octopus.teamcity.opentelemetry.common.PluginConstants.*;
 public class ProjectConfigurationSettingsController extends BaseFormXmlController {
     @NotNull
     private final ProjectManager projectManager;
+    static Logger LOG = Logger.getLogger(ProjectConfigurationSettingsController.class.getName());
 
     public ProjectConfigurationSettingsController(
             @NotNull ProjectManager projectManager,
@@ -66,7 +68,7 @@ public class ProjectConfigurationSettingsController extends BaseFormXmlControlle
                 project.persist();
                 getOrCreateMessages(request).addMessage("featureReset", "Feature was reset to the inherited settings.");
             } else {
-                Loggers.SERVER.warn(String.format("OTEL_PLUGIN: Got a request to reset settings, but the settings didn't exist on project %s?", project.getProjectId()));
+                LOG.warn(String.format("Got a request to reset settings, but the settings didn't exist on project %s?", project.getProjectId()));
             }
         } else {
             if (feature.isEmpty()) {

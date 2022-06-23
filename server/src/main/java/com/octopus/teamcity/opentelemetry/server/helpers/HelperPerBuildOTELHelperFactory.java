@@ -1,10 +1,11 @@
 package com.octopus.teamcity.opentelemetry.server.helpers;
 
-import jetbrains.buildServer.log.Loggers;
 import com.octopus.teamcity.opentelemetry.server.OTELService;
 import jetbrains.buildServer.serverSide.BuildPromotion;
 import jetbrains.buildServer.serverSide.ProjectManager;
 import jetbrains.buildServer.serverSide.crypt.EncryptUtil;
+import org.apache.log4j.Logger;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -12,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import static com.octopus.teamcity.opentelemetry.common.PluginConstants.*;
 
 public class HelperPerBuildOTELHelperFactory implements OTELHelperFactory {
+    static Logger LOG = Logger.getLogger(HelperPerBuildOTELHelperFactory.class.getName());
     private final ConcurrentHashMap<Long, OTELHelper> otelHelpers;
     private final ProjectManager projectManager;
 
@@ -19,16 +21,17 @@ public class HelperPerBuildOTELHelperFactory implements OTELHelperFactory {
         ProjectManager projectManager
     ) {
         this.projectManager = projectManager;
-        Loggers.SERVER.debug("OTEL_PLUGIN: Creating HelperPerBuildOTELHelperFactory.");
+        LOG.debug("Creating HelperPerBuildOTELHelperFactory.");
 
         this.otelHelpers = new ConcurrentHashMap<>();
     }
 
     public OTELHelper getOTELHelper(BuildPromotion build) {
         var buildId = build.getId();
-        Loggers.SERVER.debug(String.format("OTEL_PLUGIN: Getting OTELHelper for build %d.", buildId));
+        LOG.debug(String.format("Getting OTELHelper for build %d.", buildId));
+
         return otelHelpers.computeIfAbsent(buildId, key -> {
-            Loggers.SERVER.debug(String.format("OTEL_PLUGIN: Creating OTELHelper for build %d.", buildId));
+            LOG.debug(String.format("Creating OTELHelper for build %d.", buildId));
             var projectId = build.getProjectExternalId();
             var project = projectManager.findProjectByExternalId(projectId);
 
@@ -57,12 +60,12 @@ public class HelperPerBuildOTELHelperFactory implements OTELHelperFactory {
                     long endTime = System.nanoTime();
 
                     long duration = (endTime - startTime);
-                    Loggers.SERVER.debug(String.format("OTEL_PLUGIN: Created OTELHelper for build %d in %d milliseconds.", buildId, duration / 1000000));
+                    LOG.debug(String.format("Created OTELHelper for build %d in %d milliseconds.", buildId, duration / 1000000));
 
                     return otelHelper;
                 }
             }
-            Loggers.SERVER.debug(String.format("OTEL_PLUGIN: Using NullOTELHelper for build %d.", buildId));
+            LOG.debug(String.format("Using NullOTELHelper for build %d.", buildId));
             return new NullOTELHelperImpl();
         });
     }

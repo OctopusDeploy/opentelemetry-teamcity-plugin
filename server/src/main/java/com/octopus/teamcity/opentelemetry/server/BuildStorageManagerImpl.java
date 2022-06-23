@@ -2,7 +2,7 @@ package com.octopus.teamcity.opentelemetry.server;
 
 import jetbrains.buildServer.serverSide.SBuild;
 import jetbrains.buildServer.serverSide.SRunningBuild;
-import org.apache.log4j.Logger;
+import jetbrains.buildServer.log.Loggers;
 
 import javax.annotation.Nullable;
 import java.io.File;

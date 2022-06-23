@@ -1,10 +1,10 @@
 package com.octopus.teamcity.opentelemetry.server.helpers;
 
+import jetbrains.buildServer.log.Loggers;
 import com.octopus.teamcity.opentelemetry.server.OTELService;
 import jetbrains.buildServer.serverSide.BuildPromotion;
 import jetbrains.buildServer.serverSide.ProjectManager;
 import jetbrains.buildServer.serverSide.crypt.EncryptUtil;
-import org.apache.log4j.Logger;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -16,6 +16,7 @@ public class HelperPerBuildOTELHelperFactory implements OTELHelperFactory {
     private final ProjectManager projectManager;
 
     public HelperPerBuildOTELHelperFactory(
+        ProjectManager projectManager
     ) {
         this.projectManager = projectManager;
         Loggers.SERVER.debug("OTEL_PLUGIN: Creating HelperPerBuildOTELHelperFactory.");

@@ -35,6 +35,30 @@ From the [OpenTelemetry docs](https://opentelemetry.io/docs/):
 4. Note that settings are inherited and can be overridden by child project settings
 5. Install the .zip using your TeamCity instance UI via Administration -> Plugins -> Upload. Restart if required.
 
+### Logging
+
+To view logs from the plugin, add the following sections to the `conf/teamcity-server-log4j.xml` file in your teamcity installation:
+
+Under `Appenders`:
+```xml
+    <DelegateAppender>
+      <RollingFile name="OTEL.LOG" fileName="${sys:teamcity_logs}/teamcity-otel-plugin.log"
+                   filePattern="${sys:teamcity_logs}/teamcity-otel-plugin.log.%i"
+                   append="true" createOnDemand="true">
+        <PatternLayout pattern="[%d] %6p - %30.30c - %m%n" charset="UTF-8"/>
+        <SizeBasedTriggeringPolicy size="10 MB"/>
+        <DefaultRolloverStrategy max="3" fileIndex="min"/>
+      </RollingFile>
+    </DelegateAppender>
+```
+
+Under `Loggers`:
+```xml
+    <Logger name="com.octopus.teamcity.opentelemetry" level="DEBUG">
+      <AppenderRef ref="OTEL.LOG" />
+    </Logger>
+```
+
 ## Local Development
 
 ### Using Docker

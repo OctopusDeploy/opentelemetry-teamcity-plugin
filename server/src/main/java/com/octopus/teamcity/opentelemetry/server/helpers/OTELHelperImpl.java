@@ -14,12 +14,13 @@ import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
 import jetbrains.buildServer.log.Loggers;
+import org.apache.log4j.Logger;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 public class OTELHelperImpl implements OTELHelper {
-
+    static Logger LOG = Logger.getLogger(OTELHelperImpl.class.getName());
     private final OpenTelemetry openTelemetry;
     private final Tracer tracer;
     private final ConcurrentHashMap<String, Span> spanMap;
@@ -35,7 +36,7 @@ public class OTELHelperImpl implements OTELHelper {
                 .setTracerProvider(sdkTracerProvider)
                 .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
                 .build();
-        Loggers.SERVER.info("OTEL_PLUGIN: OpenTelemetry plugin started.");
+        LOG.info("OpenTelemetry plugin started.");
         this.tracer = this.openTelemetry.getTracer(PluginConstants.TRACER_INSTRUMENTATION_NAME);
         this.spanMap = new ConcurrentHashMap<>();
     }
@@ -52,7 +53,7 @@ public class OTELHelperImpl implements OTELHelper {
 
     @Override
     public Span createSpan(String spanName, Span parentSpan) {
-        Loggers.SERVER.info("OTEL_PLUGIN: Creating child span " + spanName + " under parent " + parentSpan);
+        LOG.info("Creating child span " + spanName + " under parent " + parentSpan);
         return this.spanMap.computeIfAbsent(spanName, key -> this.tracer.spanBuilder(spanName).setParent(Context.current().with(parentSpan)).startSpan());
     }
 
@@ -73,7 +74,7 @@ public class OTELHelperImpl implements OTELHelper {
 
     @Override
     public void addAttributeToSpan(Span span, String attributeName, Object attributeValue) {
-        Loggers.SERVER.debug("OTEL_PLUGIN: Adding attribute to span " + attributeName + "=" + attributeValue);
+        LOG.debug("Adding attribute to span " + attributeName + "=" + attributeValue);
         span.setAttribute(attributeName, attributeValue.toString());
     }
 }

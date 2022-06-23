@@ -6,6 +6,7 @@ import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.sdk.trace.SpanProcessor;
 import jetbrains.buildServer.serverSide.BuildPromotion;
 import jetbrains.buildServer.serverSide.SRunningBuild;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,7 +17,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -31,13 +31,8 @@ class OTELHelperTest {
 
     @BeforeEach
     void setUp() {
-        final String ENDPOINT = "https://otel.endpoint.com";
-        final Map<String, String> HEADERS = new HashMap<>() {{
-            put("testHeader1", "testHeaderValue1");
-            put("testHeader2", "testHeaderValue2");
-        }};
         GlobalOpenTelemetry.resetForTest();
-        this.otelHelper = new OTELHelperImpl(HEADERS, ENDPOINT);
+        this.otelHelper = new OTELHelperImpl(mock(SpanProcessor.class, RETURNS_DEEP_STUBS));
     }
 
 

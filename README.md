@@ -25,7 +25,10 @@ From the [OpenTelemetry docs](https://opentelemetry.io/docs/):
       2. Api Key: The honeycomb.io api key
       2. Team: Your team name from honeycomb (as shown in the browser url)
       3. Dataset: The dataset you want to send data to
-   2. If you are using another service, use the following settings:
+   2. If you are using Zipkin.io:
+      1. Service: `Zipkin`
+      2. Endpoint: The url of your zipkin instance (eg `http://localhost:9411/`)
+   3. If you are using another service, use the following settings:
       1. Service: `Custom`
       2. Endpoint: The url of the service
       3. Headers: The service specific headers required

@@ -45,6 +45,7 @@
 <%-- todo: add options for zipkin and jaeger --%>
                         <select name="service" id="service" onchange="BS.ProjectConfigurationSettings.serviceChanged(this)">
                             <option value="honeycomb.io" <c:if test='${otelService == "honeycomb.io"}'>selected="selected"</c:if>>Honeycomb.io</option>
+                            <option value="zipkin.io" <c:if test='${otelService == "zipkin.io"}'>selected="selected"</c:if>>Zipkin</option>
                             <option value="custom" <c:if test='${otelService == "custom"}'>selected="selected"</c:if>>Custom</option>
                         </select>
                         <span class="error" id="error_service"></span>
@@ -78,7 +79,7 @@
                         <span class="error" id="error_honeycombDataset"></span>
                     </td>
                 </tr>
-                <tr id="customHeaders" <c:if test='${otelService == "honeycomb.io"}'>style="display: none"</c:if>>
+                <tr id="customHeaders" <c:if test='${otelService != "custom"}'>style="display: none"</c:if>>
                     <th><label>Headers:</label></th>
                     <td>
                         <table class="highlightable parametersTable">

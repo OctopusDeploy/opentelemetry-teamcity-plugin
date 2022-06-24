@@ -19,6 +19,7 @@ dependencies {
     implementation('io.opentelemetry:opentelemetry-sdk:1.15.0')
     implementation('io.opentelemetry:opentelemetry-exporter-otlp:1.15.0')
     implementation('io.opentelemetry:opentelemetry-semconv:1.4.1-alpha')
+    implementation("io.opentelemetry:opentelemetry-exporter-zipkin")
     implementation 'io.grpc:grpc-netty-shaded:1.47.0'
 
     testImplementation 'org.jetbrains.teamcity:tests-support:2022.06'

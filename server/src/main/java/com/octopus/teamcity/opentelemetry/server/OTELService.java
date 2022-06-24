@@ -5,6 +5,7 @@ import java.util.Optional;
 
 public enum OTELService {
     HONEYCOMB("honeycomb.io"),
+    ZIPKIN("zipkin.io"),
     CUSTOM("custom");
 
     private final String value;

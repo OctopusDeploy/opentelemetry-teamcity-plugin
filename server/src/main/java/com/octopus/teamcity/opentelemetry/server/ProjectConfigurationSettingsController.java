@@ -133,8 +133,8 @@ public class ProjectConfigurationSettingsController extends BaseFormXmlControlle
             if (!this.service.isPresent())
                 errors.addError("service", "Service must be set!");
             else {
-                if (!this.service.get().equals(OTELService.HONEYCOMB) && !this.service.get().equals(OTELService.CUSTOM))
-                    errors.addError("service", "Service must be set to either 'honeycomb.io' or 'custom'!");
+                if (!this.service.get().equals(OTELService.HONEYCOMB) && !this.service.get().equals(OTELService.CUSTOM) && !this.service.get().equals(OTELService.ZIPKIN))
+                    errors.addError("service", "Service must be set to either 'honeycomb.io', 'zipkin.io' or 'custom'!");
 
                 if (this.service.get().equals(OTELService.HONEYCOMB)) {
                     if (StringUtil.isEmptyOrSpaces(this.honeycombTeam))

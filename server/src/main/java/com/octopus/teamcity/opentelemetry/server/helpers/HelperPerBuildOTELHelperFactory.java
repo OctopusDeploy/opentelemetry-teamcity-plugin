@@ -1,6 +1,13 @@
 package com.octopus.teamcity.opentelemetry.server.helpers;
 
+import com.octopus.teamcity.opentelemetry.server.LogMasker;
 import com.octopus.teamcity.opentelemetry.server.OTELService;
+import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter;
+import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporterBuilder;
+import io.opentelemetry.exporter.zipkin.ZipkinSpanExporter;
+import io.opentelemetry.sdk.trace.SpanProcessor;
+import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
+import io.opentelemetry.sdk.trace.export.SpanExporter;
 import jetbrains.buildServer.serverSide.BuildPromotion;
 import jetbrains.buildServer.serverSide.ProjectManager;
 import jetbrains.buildServer.serverSide.crypt.EncryptUtil;
@@ -41,11 +48,16 @@ public class HelperPerBuildOTELHelperFactory implements OTELHelperFactory {
                 var params = feature.getParameters();
                 if (params.get(PROPERTY_KEY_ENABLED).equals("true")) {
                     var endpoint = params.get(PROPERTY_KEY_ENDPOINT);
-                    Map<String, String> headers = new HashMap<>();
+                    SpanProcessor spanProcessor;
                     if (params.get(PROPERTY_KEY_SERVICE).equals(OTELService.HONEYCOMB.getValue())) {
+                        Map<String, String> headers = new HashMap<>();
                         headers.put("x-honeycomb-dataset", params.get(PROPERTY_KEY_HONEYCOMB_DATASET));
                         headers.put("x-honeycomb-team", EncryptUtil.unscramble(params.get(PROPERTY_KEY_HONEYCOMB_APIKEY)));
+                        spanProcessor = buildGrpcSpanProcessor(headers, endpoint);
+                    } else if (params.get(PROPERTY_KEY_SERVICE).equals(OTELService.ZIPKIN.getValue())) {
+                        spanProcessor = buildZipkinSpanProcessor(endpoint);
                     } else {
+                        Map<String, String> headers = new HashMap<>();
                         params.forEach((k, v) -> {
                             if (k.startsWith(PROPERTY_KEY_HEADERS)) {
                                 var name = k.substring(PROPERTY_KEY_HEADERS.length());
@@ -54,9 +66,10 @@ public class HelperPerBuildOTELHelperFactory implements OTELHelperFactory {
                                 headers.put(name, value);
                             }
                         });
+                        spanProcessor = buildGrpcSpanProcessor(headers, endpoint);
                     }
                     long startTime = System.nanoTime();
-                    var otelHelper = new OTELHelperImpl(headers, endpoint);
+                    var otelHelper = new OTELHelperImpl(spanProcessor);
                     long endTime = System.nanoTime();
 
                     long duration = (endTime - startTime);
@@ -68,6 +81,28 @@ public class HelperPerBuildOTELHelperFactory implements OTELHelperFactory {
             LOG.debug(String.format("Using NullOTELHelper for build %d.", buildId));
             return new NullOTELHelperImpl();
         });
+    }
+
+    private SpanProcessor buildZipkinSpanProcessor(String exporterEndpoint) {
+        String endpoint = String.format("%s/api/v2/spans", exporterEndpoint);
+        ZipkinSpanExporter zipkinExporter = ZipkinSpanExporter.builder()
+                .setEndpoint(endpoint)
+                .build();
+
+        return BatchSpanProcessor.builder(zipkinExporter).build();
+    }
+
+    private SpanProcessor buildGrpcSpanProcessor(Map<String, String> headers, String exporterEndpoint) {
+
+        OtlpGrpcSpanExporterBuilder spanExporterBuilder = OtlpGrpcSpanExporter.builder();
+        headers.forEach(spanExporterBuilder::addHeader);
+        spanExporterBuilder.setEndpoint(exporterEndpoint);
+        SpanExporter spanExporter = spanExporterBuilder.build();
+
+        LOG.debug("OTEL_PLUGIN: Opentelemetry export headers: " + LogMasker.mask(headers.toString()));
+        LOG.debug("OTEL_PLUGIN: Opentelemetry export endpoint: " + exporterEndpoint);
+
+        return BatchSpanProcessor.builder(spanExporter).build();
     }
 
     @Override

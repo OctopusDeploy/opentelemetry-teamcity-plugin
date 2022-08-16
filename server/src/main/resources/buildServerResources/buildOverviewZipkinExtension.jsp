@@ -1,7 +1,7 @@
 <%@ include file="/include.jsp"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
 
-<a href="${endpoint}/zipkin/traces/${traceId}">
+<a href="${endpoint}/zipkin/traces/${traceId}" style="display: block; margin-bottom: 30px;">
     <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 418 442" style="height: 20px; vertical-align: top;">
         <g>
             <g>

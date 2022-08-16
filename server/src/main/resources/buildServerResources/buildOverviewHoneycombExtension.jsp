@@ -1,7 +1,7 @@
 <%@ include file="/include.jsp"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
 
-<a href="https://ui.honeycomb.io/${team}/datasets/${dataset}/trace?trace_id=${traceId}&trace_start_ts=${buildStart}&trace_end_ts=${buildEnd}">
+<a href="https://ui.honeycomb.io/${team}/datasets/${dataset}/trace?trace_id=${traceId}&trace_start_ts=${buildStart}&trace_end_ts=${buildEnd}" style="display: block; margin-bottom: 30px;">
     <svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 107.51 102" style="height: 20px; vertical-align: top;">
         <defs>
             <style>.cls-1{fill:#25303e;}.cls-2{fill:#ffb000;}.cls-3{fill:#64ba00;}.cls-4{fill:#f96e10;}.cls-5{fill:#0298ec;}</style>

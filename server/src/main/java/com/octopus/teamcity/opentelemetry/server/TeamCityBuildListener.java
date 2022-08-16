@@ -164,7 +164,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                     span.end();
                     var buildId = getBuildId(build);
                     otelHelper.removeSpan(buildId);
-                    if (buildId.equals(String.valueOf(getRootBuildInChain(build))))
+                    if (buildId.equals(String.valueOf(getRootBuildInChain(build).getId())))
                         otelHelperFactory.release(build.getBuildId());
                 }
             } else {

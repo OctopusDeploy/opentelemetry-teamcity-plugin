@@ -13,7 +13,6 @@ import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
-import jetbrains.buildServer.log.Loggers;
 import org.apache.log4j.Logger;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -24,11 +23,12 @@ public class OTELHelperImpl implements OTELHelper {
     private final OpenTelemetry openTelemetry;
     private final Tracer tracer;
     private final ConcurrentHashMap<String, Span> spanMap;
+    private final SdkTracerProvider sdkTracerProvider;
 
     public OTELHelperImpl(SpanProcessor spanProcessor) {
         Resource serviceNameResource = Resource
                 .create(Attributes.of(ResourceAttributes.SERVICE_NAME, PluginConstants.SERVICE_NAME));
-        SdkTracerProvider sdkTracerProvider = SdkTracerProvider.builder()
+        this.sdkTracerProvider = SdkTracerProvider.builder()
                 .setResource(Resource.getDefault().merge(serviceNameResource))
                 .addSpanProcessor(spanProcessor)
                 .build();
@@ -36,7 +36,6 @@ public class OTELHelperImpl implements OTELHelper {
                 .setTracerProvider(sdkTracerProvider)
                 .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
                 .build();
-        LOG.info("OpenTelemetry plugin started.");
         this.tracer = this.openTelemetry.getTracer(PluginConstants.TRACER_INSTRUMENTATION_NAME);
         this.spanMap = new ConcurrentHashMap<>();
     }
@@ -76,5 +75,11 @@ public class OTELHelperImpl implements OTELHelper {
     public void addAttributeToSpan(Span span, String attributeName, Object attributeValue) {
         LOG.debug("Adding attribute to span " + attributeName + "=" + attributeValue);
         span.setAttribute(attributeName, attributeValue.toString());
+    }
+
+    @Override
+    public void release() {
+        this.sdkTracerProvider.forceFlush();
+        this.sdkTracerProvider.close();
     }
 }

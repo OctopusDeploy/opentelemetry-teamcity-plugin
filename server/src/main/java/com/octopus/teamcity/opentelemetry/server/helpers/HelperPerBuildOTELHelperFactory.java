@@ -107,6 +107,10 @@ public class HelperPerBuildOTELHelperFactory implements OTELHelperFactory {
 
     @Override
     public void release(Long buildId) {
-        otelHelpers.remove(buildId);
+        var helper = otelHelpers.get(buildId);
+        if (helper != null) {
+            helper.release();
+            otelHelpers.remove(buildId);
+        }
     }
 }

@@ -81,5 +81,6 @@ public class OTELHelperImpl implements OTELHelper {
     public void release() {
         this.sdkTracerProvider.forceFlush();
         this.sdkTracerProvider.close();
+        this.spanMap.clear();
     }
 }

@@ -22,7 +22,7 @@ dependencies {
     implementation("io.opentelemetry:opentelemetry-exporter-zipkin")
     implementation 'io.grpc:grpc-netty-shaded:1.50.2'
 
-    testImplementation 'org.jetbrains.teamcity:tests-support:2022.08'
+    testImplementation 'org.jetbrains.teamcity:tests-support:2022.10'
     testImplementation 'org.jetbrains.teamcity:server-api'
     testImplementation 'org.apache.commons:commons-lang3:3.12.0'
     testImplementation 'org.mockito:mockito-junit-jupiter:4.8.1'

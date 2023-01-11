@@ -5,7 +5,7 @@ dependencyManagement {
         dependency 'org.junit.jupiter:junit-jupiter-params:5.6.0'
         dependency 'org.assertj:assertj-core:3.18.1'
         dependency 'com.google.code.gson:gson:2.2.2'
-        dependencySet(group: 'org.jetbrains.teamcity', version: '2020.2') {
+        dependencySet(group: 'org.jetbrains.teamcity', version: '2022.10') {
             entry 'common-api'
             entry 'server-api'
         }

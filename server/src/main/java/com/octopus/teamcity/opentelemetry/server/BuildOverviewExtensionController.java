@@ -78,7 +78,7 @@ public class BuildOverviewExtensionController extends BaseController
         if (buildId != null) {
             final SBuild build = sBuildServer.findBuildInstanceById(buildId);
             if (build == null) //if it's queued, we wont get it
-                return null;
+                return getEmptyState();
 
             final SProject project = projectManager.findProjectByExternalId(build.getProjectExternalId());
 
@@ -88,14 +88,14 @@ public class BuildOverviewExtensionController extends BaseController
                 var params = feature.getParameters();
 
                 if (!params.get(PROPERTY_KEY_ENABLED).equals("true"))
-                    return null;
+                    return getEmptyState();
 
                 if (params.get(PROPERTY_KEY_SERVICE).equals(OTELService.CUSTOM.getValue()))
-                    return null;
+                    return getEmptyState();
 
                 var traceId = buildStorageManager.getTraceId(build);
                 if (traceId == null)
-                    return null;
+                    return getEmptyState();
 
                 if (params.get(PROPERTY_KEY_SERVICE).equals(OTELService.HONEYCOMB.getValue()))
                     return getHoneycombModelAndView(build, params, traceId);
@@ -104,7 +104,7 @@ public class BuildOverviewExtensionController extends BaseController
             }
         }
 
-        return null;
+        return getEmptyState();
     }
 
     @NotNull
@@ -115,6 +115,11 @@ public class BuildOverviewExtensionController extends BaseController
         model.put("traceId", traceId);
         model.put("endpoint", params.get(PROPERTY_KEY_ENDPOINT).replaceAll("/$", ""));
         return mv;
+    }
+
+    @NotNull
+    private ModelAndView getEmptyState() {
+        return new ModelAndView(pluginDescriptor.getPluginResourcesPath("buildOverviewEmpty.jsp"));
     }
 
     @NotNull

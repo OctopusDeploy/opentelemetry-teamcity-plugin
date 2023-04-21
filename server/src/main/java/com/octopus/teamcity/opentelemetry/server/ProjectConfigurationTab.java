@@ -68,7 +68,8 @@ public class ProjectConfigurationTab extends EditProjectTab {
             model.put("otelEndpoint", params.get(PROPERTY_KEY_ENDPOINT));
             model.put("otelHoneycombTeam", params.get(PROPERTY_KEY_HONEYCOMB_TEAM));
             model.put("otelHoneycombDataset", params.get(PROPERTY_KEY_HONEYCOMB_DATASET));
-            model.put("otelHoneycombApiKey", RSACipher.encryptDataForWeb(EncryptUtil.unscramble(params.get(PROPERTY_KEY_HONEYCOMB_APIKEY))));
+            // model.put("otelHoneycombApiKey",
+            // RSACipher.encryptDataForWeb(EncryptUtil.unscramble(params.get(PROPERTY_KEY_HONEYCOMB_APIKEY))));
 
             var headers = new ArrayList<HeaderDto>();
             params.forEach((k,v)->{

@@ -39,9 +39,9 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     @Autowired
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public TeamCityBuildListener(
-        EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher,
-        OTELHelperFactory otelHelperFactory,
-        BuildStorageManager buildStorageManager
+            EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher,
+            OTELHelperFactory otelHelperFactory,
+            BuildStorageManager buildStorageManager
     ) {
         this.otelHelperFactory = otelHelperFactory;
         this.buildStorageManager = buildStorageManager;
@@ -202,10 +202,44 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     private void createBuildStepSpans(SRunningBuild build, Span buildSpan) {
         Map<String, Span> blockMessageSpanMap = new HashMap<>();
         LOG.info("Retrieving build step event spans for build " + getBuildName(build));
-        List<LogMessage> buildBlockLogs = getBuildBlockLogs(build);
-        for (LogMessage logMessage: buildBlockLogs) {
-            BlockLogMessage blockLogMessage = (BlockLogMessage) logMessage;
-            createBlockMessageSpan(blockLogMessage, buildSpan, blockMessageSpanMap, build);
+
+        Iterator<LogMessage> buildBlockLogs = build.getBuildLog().getMessagesIterator();
+
+        while(buildBlockLogs.hasNext()) {
+            LogMessage logMessage = buildBlockLogs.next();
+            if (logMessage instanceof BlockLogMessage) {
+                BlockLogMessage blockLogMessage = (BlockLogMessage) logMessage;
+                createBlockMessageSpan(blockLogMessage, buildSpan, blockMessageSpanMap, build);
+            } else {
+                createLogMessageSpan(logMessage, buildSpan, blockMessageSpanMap, build);
+            }
+        }
+    }
+
+    private void createLogMessageSpan(LogMessage blockLogMessage, Span buildSpan, Map<String, Span> blockMessageSpanMap, SRunningBuild build) {
+        Date blockMessageFinishDate = null;
+        String blockMessageStepName = blockLogMessage.getText() + " " + blockMessageFinishDate;
+        LOG.debug("Build Step " + blockMessageStepName);
+        if (blockMessageFinishDate != null) { // This filters out creating duplicate spans for Builds from their build blockMessages
+            BlockLogMessage parentBlockMessage = blockLogMessage.getParent();
+            Span parentSpan;
+            if (parentBlockMessage != null) {
+                if (parentBlockMessage.getBlockType().equals(DefaultMessagesInfo.BLOCK_TYPE_BUILD)) {
+                    parentSpan = buildSpan;
+                } else {
+                    parentSpan = blockMessageSpanMap.get(parentBlockMessage.getText() + " " + parentBlockMessage.getFinishDate());
+                }
+            } else {
+                parentSpan = buildSpan;
+            }
+            var otelHelper = otelHelperFactory.getOTELHelper(getRootBuildInChain(build));
+            Span childSpan = otelHelper.createTransientSpan(blockMessageStepName, parentSpan, blockLogMessage.getTimestamp().getTime());
+            otelHelper.addAttributeToSpan(childSpan, PluginConstants.ATTRIBUTE_BUILD_STEP_STATUS, blockLogMessage.getStatus());
+            blockMessageSpanMap.put(blockMessageStepName, childSpan);
+            LOG.debug("Build step span added for " + blockMessageStepName);
+            String spanName = blockLogMessage.getText();
+            setSpanBuildAttributes(otelHelper, build, childSpan, spanName, "blockLogMessage.getBlockType()");
+            childSpan.end(blockMessageFinishDate.getTime(),TimeUnit.MILLISECONDS);
         }
     }
 
@@ -255,17 +289,6 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 this.checkoutTimeMap.put(span.getSpanContext().getSpanId(), checkoutDifference);
             }
         }
-    }
-
-    private List<LogMessage> getBuildBlockLogs(SRunningBuild build) {
-        List<LogMessage> buildLogs = build.getBuildLog().getFilteredMessages(new LogMessageFilter() {
-            @Override
-            public boolean acceptMessage(LogMessage message, boolean lastMessageInParent) {
-                return message instanceof BlockLogMessage;
-            }
-        });
-        buildLogs.removeIf(logMessage -> !(logMessage instanceof BlockLogMessage));
-        return buildLogs;
     }
 
     private void setArtifactAttributes(SRunningBuild build, Span span) {

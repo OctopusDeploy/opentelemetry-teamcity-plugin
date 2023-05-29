@@ -39,9 +39,9 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     @Autowired
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public TeamCityBuildListener(
-            EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher,
-            OTELHelperFactory otelHelperFactory,
-            BuildStorageManager buildStorageManager
+        EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher,
+        OTELHelperFactory otelHelperFactory,
+        BuildStorageManager buildStorageManager
     ) {
         this.otelHelperFactory = otelHelperFactory;
         this.buildStorageManager = buildStorageManager;

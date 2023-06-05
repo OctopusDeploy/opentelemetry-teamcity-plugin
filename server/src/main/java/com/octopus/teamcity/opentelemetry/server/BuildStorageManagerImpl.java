@@ -1,5 +1,6 @@
 package com.octopus.teamcity.opentelemetry.server;
 
+import jetbrains.buildServer.serverSide.IOGuard;
 import jetbrains.buildServer.serverSide.SBuild;
 import jetbrains.buildServer.serverSide.SRunningBuild;
 import jetbrains.buildServer.log.Loggers;
@@ -42,13 +43,15 @@ public class BuildStorageManagerImpl implements BuildStorageManager {
 
     @Override
     public void saveTraceId(SRunningBuild build, String traceId) {
-        File artifactsDir = build.getArtifactsDirectory();
-        File pluginFile = new File(artifactsDir, jetbrains.buildServer.ArtifactsConstants.TEAMCITY_ARTIFACTS_DIR + File.separatorChar + OTEL_TRACE_ID_FILENAME);
-        LOG.debug(String.format("Saving trace id %s to %s for build %d.", traceId, OTEL_TRACE_ID_FILENAME, build.getBuildId()));
-        try (FileWriter fileWriter = new FileWriter(pluginFile)) {
-            fileWriter.write(traceId);
-        } catch (IOException e) {
-            LOG.warn(String.format("Error trying to save trace id for build %d.", build.getBuildId()));
-        }
+        IOGuard.allowDiskWrite(() -> {
+            File artifactsDir = build.getArtifactsDirectory();
+            File pluginFile = new File(artifactsDir, jetbrains.buildServer.ArtifactsConstants.TEAMCITY_ARTIFACTS_DIR + File.separatorChar + OTEL_TRACE_ID_FILENAME);
+            LOG.debug(String.format("Saving trace id %s to %s for build %d.", traceId, OTEL_TRACE_ID_FILENAME, build.getBuildId()));
+            try (FileWriter fileWriter = new FileWriter(pluginFile)) {
+                fileWriter.write(traceId);
+            } catch (IOException e) {
+                LOG.warn(String.format("Error trying to save trace id for build %d.", build.getBuildId()));
+            }
+        });
     }
 }

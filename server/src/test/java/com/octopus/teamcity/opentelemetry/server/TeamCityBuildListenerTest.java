@@ -28,6 +28,7 @@ class TeamCityBuildListenerTest {
     private OTELHelper otelHelper;
     private TeamCityBuildListener buildListener;
     private OTELHelperFactory factory;
+    private TeamCityNodesImpl teamCityNodes;
 
     @BeforeEach
     void setUp(@Mock EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher) {
@@ -36,7 +37,7 @@ class TeamCityBuildListenerTest {
         this.factory = mock(OTELHelperFactory.class, RETURNS_DEEP_STUBS);
 
         var buildStorageManager = mock(BuildStorageManager.class, RETURNS_DEEP_STUBS);
-        var teamCityNodes = mock(TeamCityNodesImpl.class, RETURNS_DEEP_STUBS);
+        this.teamCityNodes = mock(TeamCityNodesImpl.class, RETURNS_DEEP_STUBS);
         this.buildListener = new TeamCityBuildListener(buildServerListenerEventDispatcher, factory, buildStorageManager, teamCityNodes);
     }
 
@@ -47,12 +48,12 @@ class TeamCityBuildListenerTest {
 
     @Test
     void buildStartedTriggeredWithNoParentShouldCreateABuildSpanAndBeAvailableInGetSpan() {
-        // Arrange
         SRunningBuild build = mock(SRunningBuild.class, RETURNS_DEEP_STUBS);
         // Stubbing this method to return the build if there is no parent, as this is the behaviour of TeamCity
         BuildPromotion[] buildPromotions = new BuildPromotion[]{build.getBuildPromotion()};
         when(build.getBuildPromotion().findTops()).thenReturn(buildPromotions);
         when(factory.getOTELHelper(Arrays.stream(buildPromotions).findFirst().get())).thenReturn(otelHelper);
+        when(teamCityNodes.getCurrentNode().isMainNode()).thenReturn(true);
 
         // Act
         this.buildListener.buildStarted(build);
@@ -65,6 +66,22 @@ class TeamCityBuildListenerTest {
     }
 
     @Test
+    void buildStartedTriggeredOnSecondaryNode_ShouldNotTrace() {
+        SRunningBuild build = mock(SRunningBuild.class, RETURNS_DEEP_STUBS);
+        // Stubbing this method to return the build if there is no parent, as this is the behaviour of TeamCity
+        BuildPromotion[] buildPromotions = new BuildPromotion[]{build.getBuildPromotion()};
+        when(factory.getOTELHelper(Arrays.stream(buildPromotions).findFirst().get())).thenReturn(otelHelper);
+        when(teamCityNodes.getCurrentNode().isMainNode()).thenReturn(false);
+
+        // Act
+        this.buildListener.buildStarted(build);
+        Span builtSpan = this.otelHelper.getSpan(String.valueOf(build.getBuildId()));
+
+        // Assert
+        assertNull(builtSpan);
+    }
+
+    @Test
     void buildStartedTriggeredWithAParentShouldCreateABuildSpanAndBeAvailableInGetSpan() {
         // Arrange
         SRunningBuild build = mock(SRunningBuild.class, RETURNS_DEEP_STUBS);
@@ -72,6 +89,7 @@ class TeamCityBuildListenerTest {
         // Stubbing this method to return the build if there is no parent, as this is the behaviour of TeamCity
         BuildPromotion[] buildPromotions = new BuildPromotion[]{parentBuild.getBuildPromotion()};
         when(build.getBuildPromotion().findTops()).thenReturn(buildPromotions);
+        when(teamCityNodes.getCurrentNode().isMainNode()).thenReturn(true);
 
         // Act
         this.buildListener.buildStarted(build);
@@ -93,6 +111,7 @@ class TeamCityBuildListenerTest {
         BuildPromotion[] buildPromotions = new BuildPromotion[]{build.getBuildPromotion()};
         when(build.getBuildPromotion().findTops()).thenReturn(buildPromotions);
         when(factory.getOTELHelper(Arrays.stream(buildPromotions).findFirst().get())).thenReturn(otelHelper);
+        when(teamCityNodes.getCurrentNode().isMainNode()).thenReturn(true);
         this.buildListener.buildStarted(build);
         assertNotNull(this.otelHelper.getSpan(String.valueOf(build.getBuildId())));
 
@@ -111,6 +130,7 @@ class TeamCityBuildListenerTest {
         BuildPromotion[] buildPromotions = new BuildPromotion[]{build.getBuildPromotion()};
         when(build.getBuildPromotion().findTops()).thenReturn(buildPromotions);
         when(factory.getOTELHelper(Arrays.stream(buildPromotions).findFirst().get())).thenReturn(otelHelper);
+        when(teamCityNodes.getCurrentNode().isMainNode()).thenReturn(true);
         this.buildListener.buildStarted(build);
         assertNotNull(this.otelHelper.getSpan(String.valueOf(build.getBuildId())));
 

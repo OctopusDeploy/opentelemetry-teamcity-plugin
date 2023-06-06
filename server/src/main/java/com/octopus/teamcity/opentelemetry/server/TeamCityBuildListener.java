@@ -143,6 +143,8 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     }
 
     private void buildFinishedOrInterrupted (SRunningBuild build) {
+        if (!nodesService.getCurrentNode().isMainNode()) return;
+
         BuildStatistics buildStatistics = build.getBuildStatistics(
                 BuildStatisticsOptions.ALL_TESTS_NO_DETAILS);
         var parentBuild = getRootBuildInChain(build);

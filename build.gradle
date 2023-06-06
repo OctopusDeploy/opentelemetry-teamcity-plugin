@@ -19,7 +19,6 @@ java {
 subprojects {
     apply plugin: 'java'
     apply plugin: 'io.spring.dependency-management'
-    apply from: "${rootDir}/gradle/versions.gradle"
 
     // Provided configuration allows compile-time only dependencies to NOT
     // be included in the final distributions.

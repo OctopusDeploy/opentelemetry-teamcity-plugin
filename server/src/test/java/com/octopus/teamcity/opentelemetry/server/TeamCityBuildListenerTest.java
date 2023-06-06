@@ -9,6 +9,7 @@ import io.opentelemetry.sdk.trace.SpanProcessor;
 import jetbrains.buildServer.serverSide.BuildPromotion;
 import jetbrains.buildServer.serverSide.BuildServerListener;
 import jetbrains.buildServer.serverSide.SRunningBuild;
+import jetbrains.buildServer.serverSide.impl.TeamCityNodesImpl;
 import jetbrains.buildServer.util.EventDispatcher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,8 +36,8 @@ class TeamCityBuildListenerTest {
         this.factory = mock(OTELHelperFactory.class, RETURNS_DEEP_STUBS);
 
         var buildStorageManager = mock(BuildStorageManager.class, RETURNS_DEEP_STUBS);
-
-        this.buildListener = new TeamCityBuildListener(buildServerListenerEventDispatcher, factory, buildStorageManager);
+        var teamCityNodes = mock(TeamCityNodesImpl.class, RETURNS_DEEP_STUBS);
+        this.buildListener = new TeamCityBuildListener(buildServerListenerEventDispatcher, factory, buildStorageManager, teamCityNodes);
     }
 
     @Test

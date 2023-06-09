@@ -35,16 +35,19 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     private final ConcurrentHashMap<String, Long> checkoutTimeMap;
     private OTELHelperFactory otelHelperFactory;
     private BuildStorageManager buildStorageManager;
+    private final TeamCityNodes nodesService;
 
     @Autowired
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public TeamCityBuildListener(
         EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher,
         OTELHelperFactory otelHelperFactory,
-        BuildStorageManager buildStorageManager
+        BuildStorageManager buildStorageManager,
+        TeamCityNodes nodesService
     ) {
         this.otelHelperFactory = otelHelperFactory;
         this.buildStorageManager = buildStorageManager;
+        this.nodesService = nodesService;
         this.checkoutTimeMap = new ConcurrentHashMap<>();
         buildServerListenerEventDispatcher.addListener(this);
         LOG.info("BuildListener registered.");
@@ -53,6 +56,13 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     @Override
     public void buildStarted(@NotNull SRunningBuild build) {
         LOG.debug(String.format("Build started method triggered for %s, id %d", getBuildName(build), build.getBuildId()));
+
+        if (!nodesService.getCurrentNode().isMainNode())
+        {
+            LOG.debug(String.format("This is not the main node - skipping OTEL tracing for %s (id %d) and leaving that responsibility for the main node to deal with", getBuildName(build), build.getBuildId()));
+            return;
+        }
+
         var parentBuild = getRootBuildInChain(build);
         var otelHelper = otelHelperFactory.getOTELHelper(parentBuild);
         if (otelHelper.isReady()) {
@@ -133,6 +143,8 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     }
 
     private void buildFinishedOrInterrupted (SRunningBuild build) {
+        if (!nodesService.getCurrentNode().isMainNode()) return;
+
         BuildStatistics buildStatistics = build.getBuildStatistics(
                 BuildStatisticsOptions.ALL_TESTS_NO_DETAILS);
         var parentBuild = getRootBuildInChain(build);

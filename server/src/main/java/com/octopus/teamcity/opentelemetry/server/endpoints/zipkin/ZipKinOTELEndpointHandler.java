@@ -1,19 +1,24 @@
 package com.octopus.teamcity.opentelemetry.server.endpoints.zipkin;
 
+import com.octopus.teamcity.opentelemetry.server.HeaderDto;
 import com.octopus.teamcity.opentelemetry.server.SetProjectConfigurationSettingsRequest;
 import com.octopus.teamcity.opentelemetry.server.endpoints.IOTELEndpointHandler;
 import io.opentelemetry.exporter.zipkin.ZipkinSpanExporter;
 import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import jetbrains.buildServer.serverSide.SBuild;
+import jetbrains.buildServer.serverSide.crypt.EncryptUtil;
+import jetbrains.buildServer.serverSide.crypt.RSACipher;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 import java.util.Map;
 
-import static com.octopus.teamcity.opentelemetry.common.PluginConstants.PROPERTY_KEY_ENDPOINT;
+import static com.octopus.teamcity.opentelemetry.common.PluginConstants.*;
+import static com.octopus.teamcity.opentelemetry.common.PluginConstants.PROPERTY_KEY_HEADERS;
 
 public class ZipKinOTELEndpointHandler implements IOTELEndpointHandler {
     private final PluginDescriptor pluginDescriptor;
@@ -50,5 +55,10 @@ public class ZipKinOTELEndpointHandler implements IOTELEndpointHandler {
     @Override
     public SetProjectConfigurationSettingsRequest GetSetProjectConfigurationSettingsRequest(HttpServletRequest request) {
         return new SetZipkinProjectConfigurationSettingsRequest(request);
+    }
+
+    @Override
+    public void mapParamsToModel(Map<String, String> params, Map<String, Object> model) {
+        model.put("otelEndpoint", params.get(PROPERTY_KEY_ENDPOINT));
     }
 }

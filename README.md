@@ -128,6 +128,7 @@ Adding a new endpoint
    - sets which ui page to use on the build overview (via `getBuildOverviewModelAndView`)
    - creates the OTEL Span Processor to use to configure OTEL (via `BuildSpanProcessor`)
    - converts the incoming settings POST to your settings request object (`GetSetProjectConfigurationSettingsRequest`)
+   - converts the saved settings to the UI model (`mapParamsToModel`)
 4. create an implementation of `SetProjectConfigurationSettingsRequest`
    - `serviceSpecificValidate` does any validation you require of your settings
    - `mapServiceSpecificParams` maps settings to a hashmap to save

@@ -9,12 +9,14 @@ import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
 import jetbrains.buildServer.serverSide.SBuild;
 import jetbrains.buildServer.serverSide.crypt.EncryptUtil;
+import jetbrains.buildServer.serverSide.crypt.RSACipher;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -76,5 +78,18 @@ public class HoneycombOTELEndpointHandler implements IOTELEndpointHandler {
     @Override
     public SetProjectConfigurationSettingsRequest GetSetProjectConfigurationSettingsRequest(HttpServletRequest request) {
         return new SetHoneycombProjectConfigurationSettingsRequest(request);
+    }
+
+    @Override
+    public void mapParamsToModel(Map<String, String> params, Map<String, Object> model) {
+        model.put("otelEndpoint", params.get(PROPERTY_KEY_ENDPOINT));
+        model.put("otelHoneycombTeam", params.get(PROPERTY_KEY_HONEYCOMB_TEAM));
+        model.put("otelHoneycombDataset", params.get(PROPERTY_KEY_HONEYCOMB_DATASET));
+        if (params.get(PROPERTY_KEY_HONEYCOMB_APIKEY) == null) {
+            model.put("otelHoneycombApiKey", null);
+        }
+        else {
+            model.put("otelHoneycombApiKey", RSACipher.encryptDataForWeb(EncryptUtil.unscramble(params.get(PROPERTY_KEY_HONEYCOMB_APIKEY))));
+        }
     }
 }

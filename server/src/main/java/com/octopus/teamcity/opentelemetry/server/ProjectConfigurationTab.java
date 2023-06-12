@@ -1,5 +1,6 @@
 package com.octopus.teamcity.opentelemetry.server;
 
+import com.octopus.teamcity.opentelemetry.server.endpoints.OTELEndpointFactory;
 import jetbrains.buildServer.controllers.admin.projects.EditProjectTab;
 import jetbrains.buildServer.serverSide.ProjectManager;
 import jetbrains.buildServer.serverSide.SProject;
@@ -20,16 +21,21 @@ import static com.octopus.teamcity.opentelemetry.common.PluginConstants.*;
 public class ProjectConfigurationTab extends EditProjectTab {
     @NotNull
     private final PluginDescriptor pluginDescriptor;
-    private ProjectManager projectManager;
+    @NotNull
+    private final ProjectManager projectManager;
+    @NotNull
+    private final OTELEndpointFactory otelEndpointFactory;
 
     public ProjectConfigurationTab(
             @NotNull PagePlaces pagePlaces,
             @NotNull PluginDescriptor pluginDescriptor,
-            @NotNull ProjectManager projectManager
+            @NotNull ProjectManager projectManager,
+            @NotNull OTELEndpointFactory otelEndpointFactory
         ) {
         super(pagePlaces, "Octopus.TeamCity.OpenTelemetry", "projectConfigurationSettings.jsp", "OpenTelemetry");
         this.pluginDescriptor = pluginDescriptor;
         this.projectManager = projectManager;
+        this.otelEndpointFactory = otelEndpointFactory;
 
         register();
     }
@@ -68,31 +74,13 @@ public class ProjectConfigurationTab extends EditProjectTab {
                 model.put("isOverridden", false);
             }
             var params = feature.getParameters();
+
+            var service = otelEndpointFactory.getOTELEndpointHandler(params.get(PROPERTY_KEY_SERVICE));
+
             model.put("otelEnabled", params.get(PROPERTY_KEY_ENABLED));
             model.put("otelService", params.get(PROPERTY_KEY_SERVICE));
-            model.put("otelEndpoint", params.get(PROPERTY_KEY_ENDPOINT));
-            model.put("otelHoneycombTeam", params.get(PROPERTY_KEY_HONEYCOMB_TEAM));
-            model.put("otelHoneycombDataset", params.get(PROPERTY_KEY_HONEYCOMB_DATASET));
-            if (params.get(PROPERTY_KEY_HONEYCOMB_APIKEY) == null) {
-                model.put("otelHoneycombApiKey", null);
-            }
-            else {
-                model.put("otelHoneycombApiKey", RSACipher.encryptDataForWeb(EncryptUtil.unscramble(params.get(PROPERTY_KEY_HONEYCOMB_APIKEY))));
-            }
 
-            var headers = new ArrayList<HeaderDto>();
-            params.forEach((k,v)->{
-                if (k.startsWith(PROPERTY_KEY_HEADERS)) {
-                    var key = k.substring(PROPERTY_KEY_HEADERS.length());
-                    key = key.substring(1, key.length() - 1);
-                    var header = new HeaderDto(key,
-                            EncryptUtil.isScrambled(v) ? EncryptUtil.unscramble(v) : v,
-                            EncryptUtil.isScrambled(v) ? "password" : "plaintext");
-                    headers.add(header);
-                }
-            });
-
-            model.put("otelHeaders", headers);
+            service.mapParamsToModel(params, model);
         }
     }
 

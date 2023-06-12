@@ -54,6 +54,7 @@ public class ProjectConfigurationTab extends EditProjectTab {
                     model.put("isOverridden", true);
                     var projectId = features.stream().skip(1).findFirst().get().getProjectId();
                     var sourceProject = projectManager.findProjectByExternalId(projectId);
+                    //todo: i think we should be referring to internal id here
                     if (sourceProject != null) {
                         model.put("overwritesInheritedFromProjectName", sourceProject.getName());
                     } else {

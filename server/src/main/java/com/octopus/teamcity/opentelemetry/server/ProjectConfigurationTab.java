@@ -54,7 +54,11 @@ public class ProjectConfigurationTab extends EditProjectTab {
                     model.put("isOverridden", true);
                     var projectId = features.stream().skip(1).findFirst().get().getProjectId();
                     var sourceProject = projectManager.findProjectByExternalId(projectId);
-                    model.put("overwritesInheritedFromProjectName", sourceProject.getName());
+                    if (sourceProject != null) {
+                        model.put("overwritesInheritedFromProjectName", sourceProject.getName());
+                    } else {
+                        model.put("overwritesInheritedFromProjectName", "<unknown>");
+                    }
                 }
             } else {
                 model.put("isInherited", true);

@@ -54,7 +54,7 @@ Under `Appenders`:
 
 Under `Loggers`:
 ```xml
-    <Logger name="com.octopus.teamcity.opentelemetry" level="DEBUG">
+    <Logger name="com.octopus.teamcity.opentelemetry" level="DEBUG" additivity="false">
       <AppenderRef ref="OTEL.LOG" />
     </Logger>
 ```
@@ -119,3 +119,18 @@ To test the plugin from code:
 To clean the project root directory of builds:
 1. Inside the root project folder run `./gradlew clean`. The gradlew script will download Gradle for you if it is not already installed.
 
+### Extending to support a new service
+
+Adding a new endpoint
+1. add a new enum value to `OTELService`
+2. create yourself a new folder under `server/endpoints`
+3. create an implementation of `IOTELEndpointHandler`. This:
+   - sets which ui page to use on the build overview (via `getBuildOverviewModelAndView`)
+   - creates the OTEL Span Processor to use to configure OTEL (via `BuildSpanProcessor`)
+   - converts the incoming settings POST to your settings request object (`GetSetProjectConfigurationSettingsRequest`)
+4. create an implementation of `SetProjectConfigurationSettingsRequest`
+   - `serviceSpecificValidate` does any validation you require of your settings
+   - `mapServiceSpecificParams` maps settings to a hashmap to save
+5. add a new case in `OTELEndpointFactory.getOTELEndpointHandler` for your enum value
+6. add a new jsp file in `resources/buildserverResources/buildOverviewXXXExtension.jsp` to show info on the build overview
+7. modify `ProjectConfigurationTab`. `projectConfigurationSettings.js` and `projectConfigurationSettings.jsp` to show the settings you need (this part still needs refactoring to split things out)

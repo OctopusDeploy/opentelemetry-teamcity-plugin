@@ -41,7 +41,8 @@
                 <tr>
                     <th><label for="service">Service:&nbsp;<span class="mandatoryAsterix" title="Mandatory field">*</span></label></th>
                     <td>
-                        <%-- todo: NOW load options from server side instead of hardcoding--%>
+                        <%-- todo: load options from server side instead of hardcoding--%>
+                        <%-- todo: add options for jaeger --%>
                         <select name="service" id="service" onchange="BS.ProjectConfigurationSettings.serviceChanged(this)">
                             <option value="honeycomb.io" <c:if test='${otelService == "honeycomb.io"}'>selected="selected"</c:if>>Honeycomb.io</option>
                             <option value="zipkin.io" <c:if test='${otelService == "zipkin.io"}'>selected="selected"</c:if>>Zipkin</option>

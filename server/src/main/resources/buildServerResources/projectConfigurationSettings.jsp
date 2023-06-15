@@ -41,8 +41,8 @@
                 <tr>
                     <th><label for="service">Service:&nbsp;<span class="mandatoryAsterix" title="Mandatory field">*</span></label></th>
                     <td>
-<%-- todo: load options from server side instead of hardcoding--%>
-<%-- todo: add options for zipkin and jaeger --%>
+                        <%-- todo: load options from server side instead of hardcoding--%>
+                        <%-- todo: add options for jaeger --%>
                         <select name="service" id="service" onchange="BS.ProjectConfigurationSettings.serviceChanged(this)">
                             <option value="honeycomb.io" <c:if test='${otelService == "honeycomb.io"}'>selected="selected"</c:if>>Honeycomb.io</option>
                             <option value="zipkin.io" <c:if test='${otelService == "zipkin.io"}'>selected="selected"</c:if>>Zipkin</option>
@@ -51,6 +51,7 @@
                         <span class="error" id="error_service"></span>
                     </td>
                 </tr>
+                <%-- todo: NOW extract these fields to separate classes--%>
                 <tr <c:if test='${otelService == "honeycomb.io"}'>style="display: none"</c:if>>
                     <th><label for="endpoint">Endpoint:&nbsp;<span class="mandatoryAsterix" title="Mandatory field">*</span></label></th>
                     <td>

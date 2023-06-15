@@ -1,5 +1,6 @@
 package com.octopus.teamcity.opentelemetry.server;
 
+import com.octopus.teamcity.opentelemetry.server.endpoints.OTELEndpointFactory;
 import jetbrains.buildServer.controllers.BaseController;
 import jetbrains.buildServer.serverSide.ProjectManager;
 import jetbrains.buildServer.serverSide.SBuild;
@@ -13,20 +14,17 @@ import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.util.Date;
-import java.util.Map;
-import java.util.logging.Logger;
 
 import static com.octopus.teamcity.opentelemetry.common.PluginConstants.*;
 
 public class BuildOverviewExtensionController extends BaseController
 {
-    private static final Logger LOG = Logger.getLogger(BuildOverviewExtensionController.class.getName());
-
     private final SBuildServer sBuildServer;
     private final ProjectManager projectManager;
     private final PluginDescriptor pluginDescriptor;
     private final BuildStorageManager buildStorageManager;
+    @NotNull
+    private final OTELEndpointFactory otelEndpointFactory;
 
     public BuildOverviewExtensionController(
             @NotNull PagePlaces pagePlaces,
@@ -34,13 +32,15 @@ public class BuildOverviewExtensionController extends BaseController
             @NotNull ProjectManager projectManager,
             @NotNull PluginDescriptor pluginDescriptor,
             @NotNull WebControllerManager controllerManager,
-            @NotNull BuildStorageManager buildStorageManager)
+            @NotNull BuildStorageManager buildStorageManager,
+            @NotNull OTELEndpointFactory otelEndpointFactory)
     {
         this.sBuildServer = sBuildServer;
         this.projectManager = projectManager;
 
         this.pluginDescriptor = pluginDescriptor;
         this.buildStorageManager = buildStorageManager;
+        this.otelEndpointFactory = otelEndpointFactory;
 
         String url = "/otel-trace-url.html";
 
@@ -77,7 +77,7 @@ public class BuildOverviewExtensionController extends BaseController
 
         if (buildId != null) {
             final SBuild build = sBuildServer.findBuildInstanceById(buildId);
-            if (build == null) //if it's queued, we wont get it
+            if (build == null) //if it's queued, we won't get it
                 return getEmptyState();
 
             final SProject project = projectManager.findProjectByExternalId(build.getProjectExternalId());
@@ -90,17 +90,12 @@ public class BuildOverviewExtensionController extends BaseController
                 if (!params.get(PROPERTY_KEY_ENABLED).equals("true"))
                     return getEmptyState();
 
-                if (params.get(PROPERTY_KEY_SERVICE).equals(OTELService.CUSTOM.getValue()))
-                    return getEmptyState();
-
                 var traceId = buildStorageManager.getTraceId(build);
                 if (traceId == null)
                     return getEmptyState();
 
-                if (params.get(PROPERTY_KEY_SERVICE).equals(OTELService.HONEYCOMB.getValue()))
-                    return getHoneycombModelAndView(build, params, traceId);
-                if (params.get(PROPERTY_KEY_SERVICE).equals(OTELService.ZIPKIN.getValue()))
-                    return getZipkinModelAndView(build, params, traceId);
+                var service = otelEndpointFactory.getOTELEndpointHandler(params.get(PROPERTY_KEY_SERVICE));
+                return service.getBuildOverviewModelAndView(build, params, traceId);
             }
         }
 
@@ -108,37 +103,7 @@ public class BuildOverviewExtensionController extends BaseController
     }
 
     @NotNull
-    private ModelAndView getZipkinModelAndView(SBuild build, Map<String, String> params, String traceId) {
-        final ModelAndView mv = new ModelAndView(pluginDescriptor.getPluginResourcesPath("buildOverviewZipkinExtension.jsp"));
-
-        var model = mv.getModel();
-        model.put("traceId", traceId);
-        model.put("endpoint", params.get(PROPERTY_KEY_ENDPOINT).replaceAll("/$", ""));
-        return mv;
-    }
-
-    @NotNull
     private ModelAndView getEmptyState() {
         return new ModelAndView(pluginDescriptor.getPluginResourcesPath("buildOverviewEmpty.jsp"));
-    }
-
-    @NotNull
-    private ModelAndView getHoneycombModelAndView(SBuild build, Map<String, String> params, String traceId) {
-        final ModelAndView mv = new ModelAndView(pluginDescriptor.getPluginResourcesPath("buildOverviewHoneycombExtension.jsp"));
-
-        var model = mv.getModel();
-        model.put("team", params.get(PROPERTY_KEY_HONEYCOMB_TEAM));
-        model.put("dataset", params.get(PROPERTY_KEY_HONEYCOMB_DATASET));
-        model.put("traceId", traceId);
-
-        //we pad the time to ensure that we get all the spans, just in case we get a slight diff in the
-        //timestamps between the traces and the server start time.
-        //this will also help us see the whole chain better
-        long twoHoursInSeconds = 7200;
-        Date startDate = build.getServerStartDate();
-        model.put("buildStart", (startDate.getTime() / 1000L) - twoHoursInSeconds);
-        var finishDate = build.getFinishDate();
-        model.put("buildEnd", ((finishDate == null ? startDate : finishDate).getTime() / 1000L) + twoHoursInSeconds);
-        return mv;
     }
 }

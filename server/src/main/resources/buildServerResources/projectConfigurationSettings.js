@@ -73,7 +73,9 @@ BS.ProjectConfigurationSettings = OO.extend(BS.PluginPropertiesForm, OO.extend(B
                 err = BS.XMLResponse.processErrors(responseXML, {}, BS.PluginPropertiesForm.propertiesErrorsHandler);
                 form.setSaving(false);
                 form.enable();
-                location.reload();
+                // if (!err) {
+                //     location.reload();
+                // }
             }
         }));
         return false;

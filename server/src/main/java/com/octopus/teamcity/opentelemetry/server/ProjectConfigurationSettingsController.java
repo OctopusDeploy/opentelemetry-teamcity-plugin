@@ -84,7 +84,7 @@ public class ProjectConfigurationSettingsController extends BaseFormXmlControlle
 
     private SetProjectConfigurationSettingsRequest mapRequest(HttpServletRequest request) {
         var otelHandler = otelEndpointFactory.getOTELEndpointHandler(request.getParameter("service"));
-        return otelHandler.GetSetProjectConfigurationSettingsRequest(request);
+        return otelHandler.getSetProjectConfigurationSettingsRequest(request);
     }
 }
 

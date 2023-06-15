@@ -122,16 +122,16 @@ To clean the project root directory of builds:
 ### Extending to support a new service
 
 Adding a new endpoint
-1. add a new enum value to `OTELService`
-2. create yourself a new folder under `server/endpoints`
-3. create an implementation of `IOTELEndpointHandler`. This:
-   - sets which ui page to use on the build overview (via `getBuildOverviewModelAndView`)
-   - creates the OTEL Span Processor to use to configure OTEL (via `BuildSpanProcessor`)
-   - converts the incoming settings POST to your settings request object (`GetSetProjectConfigurationSettingsRequest`)
-   - converts the saved settings to the UI model (`mapParamsToModel`)
-4. create an implementation of `SetProjectConfigurationSettingsRequest`
+1. Add a new enum value to `OTELService`
+2. Create yourself a new folder under `server/endpoints`
+3. Create an implementation of `IOTELEndpointHandler`.
+   - `getBuildOverviewModelAndView` - set which ui page to use on the build overview
+   - `buildSpanProcessor` - create an OTEL Span Processor to use to configure OTEL
+   - `getSetProjectConfigurationSettingsRequest` - convert the incoming settings POST to your settings request object
+   - `mapParamsToModel` - Convert the saved settings to the UI model 
+4. Create an implementation of `SetProjectConfigurationSettingsRequest`
    - `serviceSpecificValidate` does any validation you require of your settings
    - `mapServiceSpecificParams` maps settings to a hashmap to save
-5. add a new case in `OTELEndpointFactory.getOTELEndpointHandler` for your enum value
-6. add a new jsp file in `resources/buildserverResources/buildOverviewXXXExtension.jsp` to show info on the build overview
-7. modify `ProjectConfigurationTab`. `projectConfigurationSettings.js` and `projectConfigurationSettings.jsp` to show the settings you need (this part still needs refactoring to split things out)
+5. Add a new case in `OTELEndpointFactory.getOTELEndpointHandler` for your enum value
+6. Add a new jsp file in `resources/buildserverResources/buildOverviewXXXExtension.jsp` to show info on the build overview
+7. Modify `ProjectConfigurationTab`. `projectConfigurationSettings.js` and `projectConfigurationSettings.jsp` to show the settings you need (this part still needs refactoring to split things out)

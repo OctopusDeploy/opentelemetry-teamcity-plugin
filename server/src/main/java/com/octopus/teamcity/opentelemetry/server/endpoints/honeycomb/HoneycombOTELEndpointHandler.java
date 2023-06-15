@@ -54,7 +54,7 @@ public class HoneycombOTELEndpointHandler implements IOTELEndpointHandler {
     }
 
     @Override
-    public SpanProcessor BuildSpanProcessor(String endpoint, Map<String, String> params) {
+    public SpanProcessor buildSpanProcessor(String endpoint, Map<String, String> params) {
         Map<String, String> headers = new HashMap<>();
         //todo: add a setting to say "use classic" or "use environments"
         headers.put("x-honeycomb-dataset", params.get(PROPERTY_KEY_HONEYCOMB_DATASET));
@@ -76,7 +76,7 @@ public class HoneycombOTELEndpointHandler implements IOTELEndpointHandler {
     }
 
     @Override
-    public SetProjectConfigurationSettingsRequest GetSetProjectConfigurationSettingsRequest(HttpServletRequest request) {
+    public SetProjectConfigurationSettingsRequest getSetProjectConfigurationSettingsRequest(HttpServletRequest request) {
         return new SetHoneycombProjectConfigurationSettingsRequest(request);
     }
 

@@ -1,24 +1,19 @@
 package com.octopus.teamcity.opentelemetry.server.endpoints.zipkin;
 
-import com.octopus.teamcity.opentelemetry.server.HeaderDto;
 import com.octopus.teamcity.opentelemetry.server.SetProjectConfigurationSettingsRequest;
 import com.octopus.teamcity.opentelemetry.server.endpoints.IOTELEndpointHandler;
 import io.opentelemetry.exporter.zipkin.ZipkinSpanExporter;
 import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import jetbrains.buildServer.serverSide.SBuild;
-import jetbrains.buildServer.serverSide.crypt.EncryptUtil;
-import jetbrains.buildServer.serverSide.crypt.RSACipher;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
 import java.util.Map;
 
-import static com.octopus.teamcity.opentelemetry.common.PluginConstants.*;
-import static com.octopus.teamcity.opentelemetry.common.PluginConstants.PROPERTY_KEY_HEADERS;
+import static com.octopus.teamcity.opentelemetry.common.PluginConstants.PROPERTY_KEY_ENDPOINT;
 
 public class ZipKinOTELEndpointHandler implements IOTELEndpointHandler {
     private final PluginDescriptor pluginDescriptor;
@@ -39,7 +34,7 @@ public class ZipKinOTELEndpointHandler implements IOTELEndpointHandler {
     }
 
     @Override
-    public SpanProcessor BuildSpanProcessor(String endpoint, Map<String, String> params) {
+    public SpanProcessor buildSpanProcessor(String endpoint, Map<String, String> params) {
         return buildZipkinSpanProcessor(endpoint);
     }
 
@@ -53,7 +48,7 @@ public class ZipKinOTELEndpointHandler implements IOTELEndpointHandler {
     }
 
     @Override
-    public SetProjectConfigurationSettingsRequest GetSetProjectConfigurationSettingsRequest(HttpServletRequest request) {
+    public SetProjectConfigurationSettingsRequest getSetProjectConfigurationSettingsRequest(HttpServletRequest request) {
         return new SetZipkinProjectConfigurationSettingsRequest(request);
     }
 

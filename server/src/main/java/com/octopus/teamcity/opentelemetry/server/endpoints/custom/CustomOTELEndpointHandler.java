@@ -36,7 +36,7 @@ public class CustomOTELEndpointHandler implements IOTELEndpointHandler {
     }
 
     @Override
-    public SpanProcessor BuildSpanProcessor(String endpoint, Map<String, String> params) {
+    public SpanProcessor buildSpanProcessor(String endpoint, Map<String, String> params) {
         Map<String, String> headers = new HashMap<>();
         params.forEach((k, v) -> {
             if (k.startsWith(PROPERTY_KEY_HEADERS)) {
@@ -50,7 +50,7 @@ public class CustomOTELEndpointHandler implements IOTELEndpointHandler {
     }
 
     @Override
-    public SetProjectConfigurationSettingsRequest GetSetProjectConfigurationSettingsRequest(HttpServletRequest request) {
+    public SetProjectConfigurationSettingsRequest getSetProjectConfigurationSettingsRequest(HttpServletRequest request) {
         return new SetCustomProjectConfigurationSettingsRequest(request);
     }
 

@@ -47,7 +47,7 @@ public class HelperPerBuildOTELHelperFactory implements OTELHelperFactory {
                     SpanProcessor spanProcessor;
 
                     var otelHandler = otelEndpointFactory.getOTELEndpointHandler(params.get(PROPERTY_KEY_SERVICE));
-                    spanProcessor = otelHandler.BuildSpanProcessor(endpoint, params);
+                    spanProcessor = otelHandler.buildSpanProcessor(endpoint, params);
 
                     long startTime = System.nanoTime();
                     var otelHelper = new OTELHelperImpl(spanProcessor);

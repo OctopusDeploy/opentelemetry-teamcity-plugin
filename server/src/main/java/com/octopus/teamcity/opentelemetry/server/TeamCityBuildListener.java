@@ -7,7 +7,6 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
 
-import jetbrains.buildServer.log.Loggers;
 import jetbrains.buildServer.messages.DefaultMessagesInfo;
 import jetbrains.buildServer.serverSide.*;
 import jetbrains.buildServer.serverSide.artifacts.BuildArtifacts;
@@ -31,6 +30,7 @@ import java.util.stream.Collectors;
 
 public class TeamCityBuildListener extends BuildServerAdapter {
 
+    public static final String BUILD_SERVICE_NAME = "teamcity-build";
     static Logger LOG = Logger.getLogger(TeamCityBuildListener.class.getName());
     private final ConcurrentHashMap<String, Long> checkoutTimeMap;
     private OTELHelperFactory otelHelperFactory;
@@ -76,7 +76,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
             buildStorageManager.saveTraceId(build, span.getSpanContext().getTraceId());
 
             try (Scope ignored = parentSpan.makeCurrent()) {
-                setSpanBuildAttributes(otelHelper, build, span, getBuildName(build), build.getBuildTypeExternalId());
+                setSpanBuildAttributes(otelHelper, build, span, getBuildName(build), BUILD_SERVICE_NAME);
                 span.addEvent(PluginConstants.EVENT_STARTED);
                 LOG.debug(String.format("%s event added to span for build %s, id %d", PluginConstants.EVENT_STARTED, getBuildName(build), build.getBuildId()));
             } catch (Exception e) {

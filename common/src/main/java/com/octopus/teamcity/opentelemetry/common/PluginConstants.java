@@ -19,6 +19,12 @@ public class PluginConstants {
     public static final String ATTRIBUTE_BUILD_TYPE_ID = TRACER_INSTRUMENTATION_NAME + ".build_type_id";
     public static final String ATTRIBUTE_BUILD_TYPE_EXTERNAL_ID = TRACER_INSTRUMENTATION_NAME + ".build_type_external_id";
     public static final String ATTRIBUTE_BUILD_STEP_STATUS = TRACER_INSTRUMENTATION_NAME + ".build_step_status";
+    public static final String ATTRIBUTE_TEST_STATUS = TRACER_INSTRUMENTATION_NAME + ".test_status";
+    public static final String ATTRIBUTE_TEST_PASSED_FLAG = TRACER_INSTRUMENTATION_NAME + ".test_passed";
+    public static final String ATTRIBUTE_TEST_FAILED_FLAG = TRACER_INSTRUMENTATION_NAME + ".test_failed";
+    public static final String ATTRIBUTE_TEST_MUTED_FLAG = TRACER_INSTRUMENTATION_NAME + ".test_muted";
+    public static final String ATTRIBUTE_TEST_IGNORED_FLAG = TRACER_INSTRUMENTATION_NAME + ".test_ignored";
+    public static final String ATTRIBUTE_TEST_OUTPUT = TRACER_INSTRUMENTATION_NAME + ".test_output";
     public static final String ATTRIBUTE_PROJECT_NAME = TRACER_INSTRUMENTATION_NAME + ".project_name";
     public static final String ATTRIBUTE_PROJECT_ID = TRACER_INSTRUMENTATION_NAME + ".project_id";
     public static final String ATTRIBUTE_AGENT_NAME = TRACER_INSTRUMENTATION_NAME + ".agent_name";

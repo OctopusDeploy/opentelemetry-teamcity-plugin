@@ -8,6 +8,7 @@ import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
 
 import jetbrains.buildServer.messages.DefaultMessagesInfo;
+import jetbrains.buildServer.messages.Status;
 import jetbrains.buildServer.serverSide.*;
 import jetbrains.buildServer.serverSide.artifacts.BuildArtifacts;
 import jetbrains.buildServer.serverSide.artifacts.BuildArtifactsViewMode;
@@ -156,6 +157,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 try (Scope ignored = span.makeCurrent()) {
                     createQueuedEventsSpans(build, span);
                     createBuildStepSpans(build, span);
+                    createTestExecutionSpans(build, span);
                     setArtifactAttributes(build, span);
 
                     otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_SUCCESS_STATUS, build.getBuildStatus().isSuccessful());
@@ -185,6 +187,61 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         } else {
             LOG.warn(String.format("Build finished (or interrupted) for %s, id %d and plugin not ready.", getBuildName(build), build.getBuildId()));
         }
+    }
+
+    private void createTestExecutionSpans(SRunningBuild build, Span parentSpan) {
+        var buildStatistics = build.getBuildStatistics(
+                BuildStatisticsOptions.ALL_TESTS_NO_DETAILS);
+
+        var tests = buildStatistics.getAllTests();
+        for (var test: tests) {
+            createTestExecutionSpan(build, test, parentSpan);
+        }
+
+    }
+
+    private void createTestExecutionSpan(SRunningBuild build, STestRun test, Span parentSpan) {
+        var durationMs = test.getDuration(); // milliseconds
+        // For now, we are starting all tests in sync with their parent build. This isn't ideal, however the SDK doesn't expose test start/finish times here.
+        var testBuild = test.getBuild();
+        var startTime = testBuild.convertToServerTime(Objects.requireNonNull(testBuild.getClientStartDate())).getTime(); // epoch milliseconds
+        var endTime = startTime + durationMs;
+        var failed = test.getStatus().isFailed();
+        var passed = test.getStatus() == Status.NORMAL;
+        var muted = test.isMuted();
+        var ignored = test.isIgnored();
+        var testOutput = test.getFullText();
+        var testName = test.getTest().getName().getAsString();
+
+        var humanReadableStatus = "unknown";
+
+        if (muted && failed) {
+            humanReadableStatus = "muted failure";
+        }
+        else if (failed) {
+            humanReadableStatus = "failed";
+        }
+        else if (passed) {
+            humanReadableStatus = "passed";
+        }
+        else if (ignored) {
+            humanReadableStatus = "ignored";
+        }
+
+        var otelHelper = otelHelperFactory.getOTELHelper(getRootBuildInChain(build));
+        Span childSpan = otelHelper.createTransientSpan(testName, parentSpan, startTime);
+        otelHelper.addAttributeToSpan(childSpan, PluginConstants.ATTRIBUTE_SERVICE_NAME, "test-execution");
+        otelHelper.addAttributeToSpan(childSpan, PluginConstants.ATTRIBUTE_TEST_STATUS, humanReadableStatus);
+        otelHelper.addAttributeToSpan(childSpan, PluginConstants.ATTRIBUTE_TEST_PASSED_FLAG, passed);
+        otelHelper.addAttributeToSpan(childSpan, PluginConstants.ATTRIBUTE_TEST_FAILED_FLAG, failed);
+        otelHelper.addAttributeToSpan(childSpan, PluginConstants.ATTRIBUTE_TEST_IGNORED_FLAG, ignored);
+        otelHelper.addAttributeToSpan(childSpan, PluginConstants.ATTRIBUTE_TEST_MUTED_FLAG, muted);
+
+        if (failed) {
+            childSpan.setStatus(StatusCode.ERROR);
+            otelHelper.addAttributeToSpan(childSpan, PluginConstants.ATTRIBUTE_TEST_OUTPUT, testOutput);
+        }
+        childSpan.end(endTime, TimeUnit.MILLISECONDS);
     }
 
     private void createQueuedEventsSpans(SRunningBuild build, Span buildSpan) {

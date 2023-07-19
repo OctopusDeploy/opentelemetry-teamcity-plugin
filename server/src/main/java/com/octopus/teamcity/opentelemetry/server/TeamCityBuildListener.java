@@ -229,12 +229,12 @@ public class TeamCityBuildListener extends BuildServerAdapter {
 
         var otelHelper = otelHelperFactory.getOTELHelper(getRootBuildInChain(build));
         Span childSpan = otelHelper.createTransientSpan(testName, parentSpan, startTime);
-        otelHelper.addAttributeToSpan(childSpan, PluginConstants.ATTRIBUTE_SERVICE_NAME, "test-execution");
         otelHelper.addAttributeToSpan(childSpan, PluginConstants.ATTRIBUTE_TEST_STATUS, humanReadableStatus);
         otelHelper.addAttributeToSpan(childSpan, PluginConstants.ATTRIBUTE_TEST_PASSED_FLAG, passed);
         otelHelper.addAttributeToSpan(childSpan, PluginConstants.ATTRIBUTE_TEST_FAILED_FLAG, failed);
         otelHelper.addAttributeToSpan(childSpan, PluginConstants.ATTRIBUTE_TEST_IGNORED_FLAG, ignored);
         otelHelper.addAttributeToSpan(childSpan, PluginConstants.ATTRIBUTE_TEST_MUTED_FLAG, muted);
+        setSpanBuildAttributes(otelHelper, build, childSpan, testName, "test-execution");
 
         if (failed) {
             childSpan.setStatus(StatusCode.ERROR);

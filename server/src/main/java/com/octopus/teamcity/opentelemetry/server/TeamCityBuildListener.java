@@ -210,7 +210,6 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         var passed = test.getStatus() == Status.NORMAL;
         var muted = test.isMuted();
         var ignored = test.isIgnored();
-        var testOutput = test.getFullText();
         var testName = test.getTest().getName().getAsString();
 
         var humanReadableStatus = "unknown";
@@ -239,7 +238,6 @@ public class TeamCityBuildListener extends BuildServerAdapter {
 
         if (failed) {
             childSpan.setStatus(StatusCode.ERROR);
-            otelHelper.addAttributeToSpan(childSpan, PluginConstants.ATTRIBUTE_TEST_OUTPUT, testOutput);
         }
         childSpan.end(endTime, TimeUnit.MILLISECONDS);
     }

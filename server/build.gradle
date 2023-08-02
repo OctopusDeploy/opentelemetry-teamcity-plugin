@@ -20,7 +20,7 @@ dependencies {
     implementation('io.opentelemetry:opentelemetry-exporter-otlp:1.28.0')
     implementation('io.opentelemetry:opentelemetry-semconv:1.29.0-alpha-SNAPSHOT')
     implementation('io.opentelemetry:opentelemetry-exporter-zipkin')
-    implementation 'io.grpc:grpc-netty-shaded:1.57.0'
+    implementation 'io.grpc:grpc-netty-shaded:1.57.1'
 
     testImplementation 'org.jetbrains.teamcity:tests-support:2023.07'
     testImplementation 'org.jetbrains.teamcity:server-api:2023.07'

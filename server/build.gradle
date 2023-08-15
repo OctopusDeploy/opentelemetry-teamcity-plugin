@@ -17,7 +17,7 @@ dependencies {
     implementation platform("io.opentelemetry:opentelemetry-bom:1.28.0")
     implementation('io.opentelemetry:opentelemetry-api:1.28.0')
     implementation('io.opentelemetry:opentelemetry-sdk:1.28.0')
-    implementation('io.opentelemetry:opentelemetry-exporter-otlp:1.28.0')
+    implementation('io.opentelemetry:opentelemetry-exporter-otlp:1.29.0')
     implementation('io.opentelemetry:opentelemetry-semconv:1.30.0-alpha-SNAPSHOT')
     implementation('io.opentelemetry:opentelemetry-exporter-zipkin')
     implementation 'io.grpc:grpc-netty-shaded:1.57.1'

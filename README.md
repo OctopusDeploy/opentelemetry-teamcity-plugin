@@ -100,7 +100,7 @@ You must have a TeamCity instance running. To run a TeamCity instance locally:
 ### Building
 
 To build the plugin from code:
-1. Ensure your `$JAVA_HOME` points to a java11 JDK installation
+1. Ensure your `$JAVA_HOME` points to a java17 JDK installation
 2. Install TeamCity
 3. Inside the root project folder run `./gradlew build`. The gradlew script will download Gradle for you if it is not already installed.
 4. The plugin is available at `<project_root>/build/distributions/Octopus.TeamCity.OpenTelemetry.<version>.zip`.
@@ -111,7 +111,7 @@ To build the plugin from code:
 JUnit tests have been added to package test folders.
 
 To test the plugin from code:
-1. Ensure your `$JAVA_HOME` points to a java11 JDK installation
+1. Ensure your `$JAVA_HOME` points to a java17 JDK installation
 2. Inside the root project folder run `./gradlew test`. The gradlew script will download Gradle for you if it is not already installed.
 
 ### Cleaning

@@ -26,7 +26,7 @@ dependencies {
     testImplementation 'org.jetbrains.teamcity:server-api:2023.09'
     testImplementation 'org.apache.commons:commons-lang3:3.13.0'
     testImplementation 'org.mockito:mockito-junit-jupiter:5.6.0'
-    testImplementation 'org.mockito:mockito-core:5.6.0'
+    testImplementation 'org.mockito:mockito-core:5.7.0'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
 
     //provided by the environment, so we dont need to package it.

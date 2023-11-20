@@ -2,6 +2,7 @@ package com.octopus.teamcity.opentelemetry.server;
 
 import com.octopus.teamcity.opentelemetry.server.endpoints.OTELEndpointFactory;
 import jetbrains.buildServer.controllers.ActionErrors;
+import jetbrains.buildServer.controllers.ActionMessages;
 import jetbrains.buildServer.controllers.BaseFormXmlController;
 import jetbrains.buildServer.controllers.SimpleView;
 import jetbrains.buildServer.serverSide.*;
@@ -65,7 +66,7 @@ public class ProjectConfigurationSettingsController extends BaseFormXmlControlle
                 project.removeFeature(feature.stream().findFirst().get().getId());
                 var cause = project.createConfigAction(SessionUser.getUser(request), String.format("OpenTelemetry settings for '%s' were reset to their inherited values.", project.getName()));
                 project.persist(cause);
-                getOrCreateMessages(request).addMessage("featureReset", "Feature was reset to the inherited settings.");
+                ActionMessages.getOrCreateMessages(request).addMessage("featureReset", "Feature was reset to the inherited settings.");
             } else {
                 LOG.warn(String.format("Got a request to reset settings, but the settings didn't exist on project '%s'?", project.getProjectId()));
             }
@@ -82,8 +83,7 @@ public class ProjectConfigurationSettingsController extends BaseFormXmlControlle
 
             project.persist(cause);
 
-            //todo: figure out how to get these messages to show in the ui.
-            getOrCreateMessages(request).addMessage("featureUpdated", "Feature was updated.");
+            ActionMessages.getOrCreateMessages(request).addMessage("featureUpdated", "Feature was updated.");
         }
     }
 

@@ -7,6 +7,7 @@ import jetbrains.buildServer.controllers.BaseFormXmlController;
 import jetbrains.buildServer.controllers.SimpleView;
 import jetbrains.buildServer.serverSide.*;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
+import jetbrains.buildServer.web.util.SessionUser;
 import org.apache.log4j.Logger;
 import org.jdom.Element;
 import org.jetbrains.annotations.NotNull;
@@ -63,20 +64,24 @@ public class ProjectConfigurationSettingsController extends BaseFormXmlControlle
         if (settingsRequest.mode.isPresent() && settingsRequest.mode.get().equals(SaveMode.RESET)) {
             if (!feature.isEmpty()) {
                 project.removeFeature(feature.stream().findFirst().get().getId());
-                project.persist();
+                var cause = project.createConfigAction(SessionUser.getUser(request), String.format("OpenTelemetry settings for '%s' were reset to their inherited values.", project.getName()));
+                project.persist(cause);
                 ActionMessages.getOrCreateMessages(request).addMessage("featureReset", "Feature was reset to the inherited settings.");
             } else {
-                LOG.warn(String.format("Got a request to reset settings, but the settings didn't exist on project %s?", project.getProjectId()));
+                LOG.warn(String.format("Got a request to reset settings, but the settings didn't exist on project '%s'?", project.getProjectId()));
             }
         } else {
+            ConfigAction cause;
             if (feature.isEmpty()) {
                 project.addFeature(PLUGIN_NAME, settingsRequest.AsParams());
+                cause = project.createConfigAction(SessionUser.getUser(request), String.format("OpenTelemetry settings for added for '%s'", project.getName()));
             } else {
                 var featureId = feature.stream().findFirst().get().getId();
                 project.updateFeature(featureId, PLUGIN_NAME, settingsRequest.AsParams());
+                cause = project.createConfigAction(SessionUser.getUser(request), String.format("OpenTelemetry settings for updated for '%s'", project.getName()));
             }
 
-            project.persist();
+            project.persist(cause);
 
             ActionMessages.getOrCreateMessages(request).addMessage("featureUpdated", "Feature was updated.");
         }

@@ -22,10 +22,10 @@
                     <tr>
                         <td colspan="2">
                             <c:if test='${isInherited}'>
-                                <i>Inherited from project <c:out value="${inheritedFromProjectName}" /></i>
+                                <i>Inherited from project <a href="/admin/editProject.html?projectId=${inheritedFromProjectExternalId}&tab=Octopus.TeamCity.OpenTelemetry#"><c:out value="${inheritedFromProjectName}" /></a></i>
                             </c:if>
                             <c:if test='${isOverridden}'>
-                                <i>Overrides configuration from project <c:out value="${overwritesInheritedFromProjectName}" /></i>
+                                <i>Overrides configuration from project <a href="/admin/editProject.html?projectId=${overwritesInheritedFromProjectExternalId}&tab=Octopus.TeamCity.OpenTelemetry#"><c:out value="${overwritesInheritedFromProjectName}" /></a></i>
                                 <forms:button onclick="BS.ProjectConfigurationSettings.reset()">Reset</forms:button>
                             </c:if>
                         </td>

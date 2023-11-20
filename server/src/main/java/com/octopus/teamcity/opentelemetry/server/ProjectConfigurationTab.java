@@ -4,14 +4,12 @@ import com.octopus.teamcity.opentelemetry.server.endpoints.OTELEndpointFactory;
 import jetbrains.buildServer.controllers.admin.projects.EditProjectTab;
 import jetbrains.buildServer.serverSide.ProjectManager;
 import jetbrains.buildServer.serverSide.SProject;
-import jetbrains.buildServer.serverSide.crypt.EncryptUtil;
 import jetbrains.buildServer.serverSide.crypt.RSACipher;
 import jetbrains.buildServer.web.openapi.PagePlaces;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
 import org.jetbrains.annotations.NotNull;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -59,18 +57,15 @@ public class ProjectConfigurationTab extends EditProjectTab {
                 if (features.size() > 1) {
                     model.put("isOverridden", true);
                     var projectId = features.stream().skip(1).findFirst().get().getProjectId();
-                    var sourceProject = projectManager.findProjectByExternalId(projectId);
-                    //todo: i think we should be referring to internal id here
-                    if (sourceProject != null) {
-                        model.put("overwritesInheritedFromProjectName", sourceProject.getName());
-                    } else {
-                        model.put("overwritesInheritedFromProjectName", "<unknown>");
-                    }
+                    var sourceProject = projectManager.findProjectById(projectId);
+                    model.put("overwritesInheritedFromProjectExternalId", sourceProject.getExternalId());
+                    model.put("overwritesInheritedFromProjectName", sourceProject.getName());
                 }
             } else {
                 model.put("isInherited", true);
-                var sourceProject = projectManager.findProjectByExternalId(feature.getProjectId());
+                var sourceProject = projectManager.findProjectById(feature.getProjectId());
                 model.put("inheritedFromProjectName", sourceProject.getName());
+                model.put("inheritedFromProjectExternalId", sourceProject.getExternalId());
                 model.put("isOverridden", false);
             }
             var params = feature.getParameters();

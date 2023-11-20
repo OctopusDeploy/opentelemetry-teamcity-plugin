@@ -15,8 +15,11 @@
         Send build trace data to an OpenTelemetry collector, helping you visualize how to optimize your builds and their dependency trees
     </div>
 
+    <bs:messages key="featureReset"/>
+    <bs:messages key="featureUpdated"/>
+
     <div class="editSettingsPage">
-        <form id="editOpenTelemetrySettingsPage">
+        <form id="editOpenTelemetrySettingsPage" onsubmit="return BS.ProjectConfigurationSettings.save();" method="post" autocomplete="off">
             <table class="runnerFormTable">
                 <c:if test='${isInherited || isOverridden}'>
                     <tr>
@@ -130,9 +133,8 @@
             </table>
 
             <div class="saveButtonsBlock" id="saveButtons">
-                <%-- todo: save progress doesn't seem to work --%>
                 <forms:saving id="saveProgress"/>
-                <forms:button onclick="BS.ProjectConfigurationSettings.save()">Save</forms:button>
+                <forms:submit label="Save"/>
                 <input type="hidden" name="projectId" value="${currentProject.externalId}"/>
                 <input type="hidden" name="mode" value="save" />
                 <input type="hidden" id="publicKey" name="publicKey" value="<c:out value='${publicKey}'/>"/>

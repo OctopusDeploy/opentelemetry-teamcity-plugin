@@ -23,14 +23,14 @@ dependencies {
     implementation 'io.grpc:grpc-netty-shaded:1.60.1'
 
     testImplementation 'org.jetbrains.teamcity:tests-support:2023.11'
-    testImplementation 'org.jetbrains.teamcity:server-api:2023.11'
+    testImplementation 'org.jetbrains.teamcity:server-api:2023.11.1'
     testImplementation 'org.apache.commons:commons-lang3:3.14.0'
     testImplementation 'org.mockito:mockito-junit-jupiter:5.8.0'
     testImplementation 'org.mockito:mockito-core:5.8.0'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.1'
 
     //provided by the environment, so we dont need to package it.
-    provided 'org.jetbrains.teamcity:server-api:2023.11'
+    provided 'org.jetbrains.teamcity:server-api:2023.11.1'
 }
 
 test {

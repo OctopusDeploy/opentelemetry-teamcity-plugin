@@ -1,0 +1,13 @@
+variable "IsPreRelease" {
+    value "true" {
+        channel = ["pre-release"]
+    }
+
+    value "false" {
+        channel = ["release"]
+    }
+}
+
+variable "jbPackageId" {
+    value "17476" {}
+}

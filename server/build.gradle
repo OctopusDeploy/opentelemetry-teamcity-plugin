@@ -14,7 +14,7 @@ tasks.named('jar') {
 
 dependencies {
     implementation project(':common')
-    implementation platform("io.opentelemetry:opentelemetry-bom:1.40.0")
+    implementation platform("io.opentelemetry:opentelemetry-bom:1.41.0")
     implementation('io.opentelemetry:opentelemetry-api:1.41.0')
     implementation('io.opentelemetry:opentelemetry-sdk:1.41.0')
     implementation('io.opentelemetry:opentelemetry-exporter-otlp:1.41.0')

@@ -44,10 +44,10 @@ class OTELHelperTest {
     }
 
     @Test
-    void getParentSpanShouldReturnABuildSpanAndBeAvailableInGetSpan(@Mock SRunningBuild build) {
+    void getParentSpanShouldReturnABuildSpanAndBeAvailableInGetOrCreateSpan(@Mock SRunningBuild build) {
         // Arrange
         String parentBuildId = String.valueOf(build.getBuildId());
-        Span parentSpan = this.otelHelper.getParentSpan(parentBuildId);
+        Span parentSpan = this.otelHelper.getOrCreateParentSpan(parentBuildId);
 
         // Act
         Span buildSpan = this.otelHelper.getSpan(String.valueOf(build.getBuildId()));
@@ -131,6 +131,6 @@ class OTELHelperTest {
         BuildPromotion[] parentBuilds = build.getBuildPromotion().findTops();
         BuildPromotion parentBuildPromotion = parentBuilds[0];
         String parentBuildId = String.valueOf(parentBuildPromotion.getId());
-        return this.otelHelper.getParentSpan(parentBuildId);
+        return this.otelHelper.getOrCreateParentSpan(parentBuildId);
     }
 }

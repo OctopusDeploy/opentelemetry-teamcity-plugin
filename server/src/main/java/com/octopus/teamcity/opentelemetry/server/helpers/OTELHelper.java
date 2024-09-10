@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit;
 public interface OTELHelper {
     boolean isReady();
 
-    Span getParentSpan(String buildId);
+    Span getOrCreateParentSpan(String buildId);
 
     Span createSpan(String spanName, Span parentSpan);
 

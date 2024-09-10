@@ -9,7 +9,7 @@ public class NullOTELHelperImpl implements OTELHelper {
     }
 
     @Override
-    public Span getParentSpan(String buildId) {
+    public Span getOrCreateParentSpan(String buildId) {
         return null;
     }
 

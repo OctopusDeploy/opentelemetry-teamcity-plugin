@@ -9,7 +9,6 @@ import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
 import jetbrains.buildServer.serverSide.SBuild;
 import jetbrains.buildServer.serverSide.crypt.EncryptUtil;
-import jetbrains.buildServer.serverSide.crypt.RSACipher;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
 import org.apache.log4j.Logger;
 import org.springframework.web.servlet.ModelAndView;
@@ -20,7 +19,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static com.octopus.teamcity.opentelemetry.common.PluginConstants.*;
-import static com.octopus.teamcity.opentelemetry.common.PluginConstants.PROPERTY_KEY_HONEYCOMB_APIKEY;
 
 public class CustomOTELEndpointHandler implements IOTELEndpointHandler {
     private final PluginDescriptor pluginDescriptor;

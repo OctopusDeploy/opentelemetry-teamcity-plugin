@@ -34,18 +34,18 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     public static final String BUILD_SERVICE_NAME = "teamcity-build";
     static Logger LOG = Logger.getLogger(TeamCityBuildListener.class.getName());
     private final ConcurrentHashMap<String, Long> checkoutTimeMap;
-    private OTELHelperFactory otelHelperFactory;
-    private BuildStorageManager buildStorageManager;
+    private final OTELHelperFactory otelHelperFactory;
+    private final BuildStorageManager buildStorageManager;
     private final TeamCityNodes nodesService;
 
     @Autowired
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public TeamCityBuildListener(
-        EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher,
-        OTELHelperFactory otelHelperFactory,
-        BuildStorageManager buildStorageManager,
-        TeamCityNodes nodesService
-    ) {
+        @NotNull EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher,
+        @NotNull OTELHelperFactory otelHelperFactory,
+        @NotNull BuildStorageManager buildStorageManager,
+        @NotNull TeamCityNodes nodesService)
+    {
         this.otelHelperFactory = otelHelperFactory;
         this.buildStorageManager = buildStorageManager;
         this.nodesService = nodesService;
@@ -150,6 +150,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
 
         BuildStatistics buildStatistics = build.getBuildStatistics(
                 BuildStatisticsOptions.ALL_TESTS_NO_DETAILS);
+
         var parentBuild = getRootBuildInChain(build);
         var otelHelper = otelHelperFactory.getOTELHelper(parentBuild);
         if (otelHelper.isReady()) {
@@ -342,7 +343,6 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         AtomicLong buildTotalArtifactSize = new AtomicLong();
         BuildArtifacts buildArtifacts = build.getArtifacts(BuildArtifactsViewMode.VIEW_DEFAULT);
         buildArtifacts.iterateArtifacts(artifact -> {
-            LOG.debug("Build artifact size attribute " + artifact.getName() + "=" + artifact.getSize());
             buildTotalArtifactSize.getAndAdd(artifact.getSize());
             return BuildArtifacts.BuildArtifactsProcessor.Continuation.CONTINUE;
         });

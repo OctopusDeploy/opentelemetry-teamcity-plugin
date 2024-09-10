@@ -71,3 +71,17 @@ step "create-github-release" {
         }
     }
 }
+
+step "dummy-step-to-allow-deployments-to-test" {
+    name = "Dummy step to allow deployments to test"
+
+    action {
+        action_type = "Octopus.Script"
+        properties = {
+            Octopus.Action.Script.ScriptBody = "echo \"this is just a dummy step... otherwise, it wont deploy a release to test with no active steps\""
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+        }
+        worker_pool = "hosted-ubuntu"
+    }
+}

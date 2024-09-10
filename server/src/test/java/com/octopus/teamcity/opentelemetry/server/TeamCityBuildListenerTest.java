@@ -93,7 +93,7 @@ class TeamCityBuildListenerTest {
 
         // Act
         this.buildListener.buildStarted(build);
-        Span parentSpan = this.otelHelper.getParentSpan(String.valueOf(parentBuild.getBuildId()));
+        Span parentSpan = this.otelHelper.getOrCreateParentSpan(String.valueOf(parentBuild.getBuildId()));
         Span builtSpan = this.otelHelper.getSpan(String.valueOf(build.getBuildId()));
         Span expectedSpan = this.otelHelper.createSpan(String.valueOf(build.getBuildId()), parentSpan);
 

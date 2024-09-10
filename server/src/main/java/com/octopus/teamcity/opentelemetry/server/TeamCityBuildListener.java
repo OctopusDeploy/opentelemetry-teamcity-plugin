@@ -70,7 +70,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
             var parentBuildId = parentBuild.getId();
             LOG.debug(String.format("Root build of build id %d is %d", build.getBuildId(), parentBuildId));
 
-            Span parentSpan = otelHelper.getParentSpan(String.valueOf(parentBuildId));
+            Span parentSpan = otelHelper.getOrCreateParentSpan(String.valueOf(parentBuildId));
             Span span = otelHelper.createSpan(getBuildId(build), parentSpan);
             LOG.debug(String.format("Span created for %s, id %d", getBuildName(build), build.getBuildId()));
 

@@ -46,19 +46,25 @@ public class OTELHelperImpl implements OTELHelper {
     }
 
     @Override
-    public Span getParentSpan(String buildId) {
+    public Span getOrCreateParentSpan(String buildId) {
         return this.spanMap.computeIfAbsent(buildId, key -> this.tracer.spanBuilder(buildId).startSpan());
     }
 
     @Override
     public Span createSpan(String spanName, Span parentSpan) {
         LOG.info("Creating child span " + spanName + " under parent " + parentSpan);
-        return this.spanMap.computeIfAbsent(spanName, key -> this.tracer.spanBuilder(spanName).setParent(Context.current().with(parentSpan)).startSpan());
+        return this.spanMap.computeIfAbsent(spanName, key -> this.tracer
+                .spanBuilder(spanName)
+                .setParent(Context.current().with(parentSpan))
+                .startSpan());
     }
 
     @Override
     public Span createTransientSpan(String spanName, Span parentSpan, long startTime) {
-        return this.tracer.spanBuilder(spanName).setParent(Context.current().with(parentSpan)).setStartTimestamp(startTime, TimeUnit.MILLISECONDS).startSpan();
+        return this.tracer.spanBuilder(spanName)
+                .setParent(Context.current().with(parentSpan))
+                .setStartTimestamp(startTime, TimeUnit.MILLISECONDS)
+                .startSpan();
     }
 
     @Override

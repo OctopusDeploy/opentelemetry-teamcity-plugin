@@ -16,8 +16,10 @@ public class PluginConstants {
 
     public static final String ATTRIBUTE_SERVICE_NAME = "service_name";
     public static final String ATTRIBUTE_NAME = "name";
+    public static final String ATTRIBUTE_BUILD_ID = TRACER_INSTRUMENTATION_NAME + ".build_id";
     public static final String ATTRIBUTE_BUILD_TYPE_ID = TRACER_INSTRUMENTATION_NAME + ".build_type_id";
     public static final String ATTRIBUTE_BUILD_TYPE_EXTERNAL_ID = TRACER_INSTRUMENTATION_NAME + ".build_type_external_id";
+    public static final String ATTRIBUTE_BUILD_IS_COMPOSITE = TRACER_INSTRUMENTATION_NAME + ".build_is_composite";
     public static final String ATTRIBUTE_BUILD_STEP_STATUS = TRACER_INSTRUMENTATION_NAME + ".build_step_status";
     public static final String ATTRIBUTE_TEST_STATUS = TRACER_INSTRUMENTATION_NAME + ".test_status";
     public static final String ATTRIBUTE_TEST_PASSED_FLAG = TRACER_INSTRUMENTATION_NAME + ".test_passed";

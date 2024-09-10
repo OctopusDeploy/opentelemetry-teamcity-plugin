@@ -127,6 +127,8 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_NUMBER, build.getBuildNumber());
         otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_SERVICE_NAME,  serviceName);
         otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_NAME, spanName);
+        otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_ID, build.getBuildId());
+        otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_IS_COMPOSITE, build.getBuildPromotion().isCompositeBuild());
     }
 
     @Override

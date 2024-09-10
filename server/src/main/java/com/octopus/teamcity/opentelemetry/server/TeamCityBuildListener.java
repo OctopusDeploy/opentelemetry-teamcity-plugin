@@ -218,17 +218,22 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 BuildStatisticsOptions.ALL_TESTS_NO_DETAILS);
 
         var tests = buildStatistics.getAllTests();
-        for (var test: tests) {
-            createTestExecutionSpan(build, test, parentSpan);
+        var otelHelper = otelHelperFactory.getOTELHelper(getRootBuildInChain(build));
+
+        if (!tests.isEmpty()) {
+            var startTime = build.convertToServerTime(Objects.requireNonNull(build.getClientStartDate())).getTime(); // epoch milliseconds
+            Span testsSpan = otelHelper.createTransientSpan("Tests", parentSpan, startTime);
+
+            for (var test : tests) {
+                createTestExecutionSpan(otelHelper, build, test, testsSpan, startTime);
+            }
         }
 
     }
 
-    private void createTestExecutionSpan(SRunningBuild build, STestRun test, Span parentSpan) {
+    private void createTestExecutionSpan(OTELHelper otelHelper, SRunningBuild build, STestRun test, Span parentSpan, long startTime) {
         var durationMs = test.getDuration(); // milliseconds
         // For now, we are starting all tests in sync with their parent build. This isn't ideal, however the SDK doesn't expose test start/finish times here.
-        var testBuild = test.getBuild();
-        var startTime = testBuild.convertToServerTime(Objects.requireNonNull(testBuild.getClientStartDate())).getTime(); // epoch milliseconds
         var endTime = startTime + durationMs;
         var failed = test.getStatus().isFailed();
         var passed = test.getStatus() == Status.NORMAL;
@@ -251,7 +256,6 @@ public class TeamCityBuildListener extends BuildServerAdapter {
             humanReadableStatus = "ignored";
         }
 
-        var otelHelper = otelHelperFactory.getOTELHelper(getRootBuildInChain(build));
         Span childSpan = otelHelper.createTransientSpan(testName, parentSpan, startTime);
         otelHelper.addAttributeToSpan(childSpan, PluginConstants.ATTRIBUTE_TEST_STATUS, humanReadableStatus);
         otelHelper.addAttributeToSpan(childSpan, PluginConstants.ATTRIBUTE_TEST_PASSED_FLAG, passed);

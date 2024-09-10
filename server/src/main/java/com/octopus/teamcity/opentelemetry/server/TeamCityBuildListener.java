@@ -17,6 +17,7 @@ import jetbrains.buildServer.serverSide.buildLog.LogMessage;
 import jetbrains.buildServer.serverSide.buildLog.LogMessageFilter;
 import jetbrains.buildServer.util.EventDispatcher;
 import org.apache.log4j.Logger;
+import org.apache.logging.log4j.CloseableThreadContext;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -65,30 +66,35 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         }
 
         var rootBuildInChain = getRootBuildInChain(build);
-        var otelHelper = otelHelperFactory.getOTELHelper(rootBuildInChain);
-        if (otelHelper.isReady()) {
-            var rootBuildInChainId = rootBuildInChain.getId();
-            LOG.debug(String.format("Root build of build id %d is %d", build.getBuildId(), rootBuildInChainId));
+        try (var ignored1 = CloseableThreadContext.put("teamcity.build.id", String.valueOf(build.getBuildId()))) {
+            try (var ignored2 = CloseableThreadContext.put("teamcity.root.build.id", String.valueOf(rootBuildInChain.getId()))) {
 
-            Span rootSpan = otelHelper.getOrCreateParentSpan(String.valueOf(rootBuildInChainId));
-            buildStorageManager.saveTraceId(build, rootSpan.getSpanContext().getTraceId());
+                var otelHelper = otelHelperFactory.getOTELHelper(rootBuildInChain);
+                if (otelHelper.isReady()) {
+                    var rootBuildInChainId = rootBuildInChain.getId();
+                    LOG.debug(String.format("Root build of build id %d is %d", build.getBuildId(), rootBuildInChainId));
 
-            var span = ensureSpansExistLinkingToRoot(otelHelper, build.getBuildPromotion(), rootBuildInChain);
+                    Span rootSpan = otelHelper.getOrCreateParentSpan(String.valueOf(rootBuildInChainId));
+                    buildStorageManager.saveTraceId(build, rootSpan.getSpanContext().getTraceId());
 
-            try (Scope ignored = rootSpan.makeCurrent()) {
-                setSpanBuildAttributes(otelHelper, build, span, getBuildName(build), BUILD_SERVICE_NAME);
-                span.addEvent(PluginConstants.EVENT_STARTED);
-                LOG.debug(String.format("%s event added to span for build %s, id %d", PluginConstants.EVENT_STARTED, getBuildName(build), build.getBuildId()));
-            } catch (Exception e) {
-                LOG.error("Exception in Build Start caused by: " + e + e.getCause() +
-                        ", with message: " + e.getMessage() +
-                        ", and stacktrace: " + Arrays.toString(e.getStackTrace()));
-                if (span != null) {
-                    span.setStatus(StatusCode.ERROR, PluginConstants.EXCEPTION_ERROR_MESSAGE_DURING_BUILD_START + ": " + e.getMessage());
+                    var span = ensureSpansExistLinkingToRoot(otelHelper, build.getBuildPromotion(), rootBuildInChain);
+
+                    try (Scope ignored3 = rootSpan.makeCurrent()) {
+                        setSpanBuildAttributes(otelHelper, build, span, getBuildName(build), BUILD_SERVICE_NAME);
+                        span.addEvent(PluginConstants.EVENT_STARTED);
+                        LOG.debug(String.format("%s event added to span for build %s, id %d", PluginConstants.EVENT_STARTED, getBuildName(build), build.getBuildId()));
+                    } catch (Exception e) {
+                        LOG.error("Exception in Build Start caused by: " + e + e.getCause() +
+                                ", with message: " + e.getMessage() +
+                                ", and stacktrace: " + Arrays.toString(e.getStackTrace()));
+                        if (span != null) {
+                            span.setStatus(StatusCode.ERROR, PluginConstants.EXCEPTION_ERROR_MESSAGE_DURING_BUILD_START + ": " + e.getMessage());
+                        }
+                    }
+                } else {
+                    LOG.info(String.format("Build start triggered for %s, id %d and plugin not ready. This build will not be traced.", getBuildName(build), build.getBuildId()));
                 }
             }
-        } else {
-            LOG.info(String.format("Build start triggered for %s, id %d and plugin not ready. This build will not be traced.", getBuildName(build), build.getBuildId()));
         }
     }
 
@@ -172,44 +178,49 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         BuildStatistics buildStatistics = build.getBuildStatistics(
                 BuildStatisticsOptions.ALL_TESTS_NO_DETAILS);
 
-        var parentBuild = getRootBuildInChain(build);
-        var otelHelper = otelHelperFactory.getOTELHelper(parentBuild);
-        if (otelHelper.isReady()) {
-            if (otelHelper.getSpan(getBuildId(build)) != null) {
-                Span span = otelHelper.getSpan(getBuildId(build));
-                LOG.debug("Build finished and span found for " + getBuildName(build));
-                try (Scope ignored = span.makeCurrent()) {
-                    createQueuedEventsSpans(build, span);
-                    createBuildStepSpans(build, span);
-                    createTestExecutionSpans(build, span);
-                    setArtifactAttributes(build, span);
+        var rootBuildInChain = getRootBuildInChain(build);
 
-                    otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_SUCCESS_STATUS, build.getBuildStatus().isSuccessful());
-                    otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_FAILED_TEST_COUNT, buildStatistics.getFailedTestCount());
-                    otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_PROBLEMS_COUNT, buildStatistics.getCompilationErrorsCount());
-                    if (this.checkoutTimeMap.containsKey(span.getSpanContext().getSpanId())) {
-                        otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_CHECKOUT_TIME, this.checkoutTimeMap.get(span.getSpanContext().getSpanId()));
-                        this.checkoutTimeMap.remove(span.getSpanContext().getSpanId());
+        try (var ignored1 = CloseableThreadContext.put("teamcity.build.id", String.valueOf(build.getBuildId()))) {
+            try (var ignored2 = CloseableThreadContext.put("teamcity.root.build.id", String.valueOf(rootBuildInChain.getId()))) {
+                var otelHelper = otelHelperFactory.getOTELHelper(rootBuildInChain);
+                if (otelHelper.isReady()) {
+                    if (otelHelper.getSpan(getBuildId(build)) != null) {
+                        Span span = otelHelper.getSpan(getBuildId(build));
+                        LOG.debug("Build finished and span found for " + getBuildName(build));
+                        try (Scope ignored3 = span.makeCurrent()) {
+                            createQueuedEventsSpans(build, span);
+                            createBuildStepSpans(build, span);
+                            createTestExecutionSpans(build, span);
+                            setArtifactAttributes(build, span);
+
+                            otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_SUCCESS_STATUS, build.getBuildStatus().isSuccessful());
+                            otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_FAILED_TEST_COUNT, buildStatistics.getFailedTestCount());
+                            otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_PROBLEMS_COUNT, buildStatistics.getCompilationErrorsCount());
+                            if (this.checkoutTimeMap.containsKey(span.getSpanContext().getSpanId())) {
+                                otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_CHECKOUT_TIME, this.checkoutTimeMap.get(span.getSpanContext().getSpanId()));
+                                this.checkoutTimeMap.remove(span.getSpanContext().getSpanId());
+                            }
+                            span.addEvent(PluginConstants.EVENT_FINISHED);
+                            LOG.debug("" + PluginConstants.EVENT_FINISHED + " event added to span for build " + getBuildName(build));
+                        } catch (Exception e) {
+                            LOG.error("Exception in Build Finish caused by: " + e + e.getCause() +
+                                    ", with message: " + e.getMessage() +
+                                    ", and stacktrace: " + Arrays.toString(e.getStackTrace()));
+                            span.setStatus(StatusCode.ERROR, PluginConstants.EXCEPTION_ERROR_MESSAGE_DURING_BUILD_FINISH + ": " + e.getMessage());
+                        } finally {
+                            span.end();
+                            var buildId = getBuildId(build);
+                            otelHelper.removeSpan(buildId);
+                            if (buildId.equals(String.valueOf(getRootBuildInChain(build).getId())))
+                                otelHelperFactory.release(build.getBuildId());
+                        }
+                    } else {
+                        LOG.warn("Build end triggered but span not found for build " + getBuildName(build) + " id " + build.getBuildId());
                     }
-                    span.addEvent(PluginConstants.EVENT_FINISHED);
-                    LOG.debug("" + PluginConstants.EVENT_FINISHED + " event added to span for build " + getBuildName(build));
-                } catch (Exception e) {
-                    LOG.error("Exception in Build Finish caused by: " + e + e.getCause() +
-                            ", with message: " + e.getMessage() +
-                            ", and stacktrace: " + Arrays.toString(e.getStackTrace()));
-                    span.setStatus(StatusCode.ERROR, PluginConstants.EXCEPTION_ERROR_MESSAGE_DURING_BUILD_FINISH + ": " + e.getMessage());
-                } finally {
-                    span.end();
-                    var buildId = getBuildId(build);
-                    otelHelper.removeSpan(buildId);
-                    if (buildId.equals(String.valueOf(getRootBuildInChain(build).getId())))
-                        otelHelperFactory.release(build.getBuildId());
+                } else {
+                    LOG.warn(String.format("Build finished (or interrupted) for %s, id %d and plugin not ready.", getBuildName(build), build.getBuildId()));
                 }
-            } else {
-                LOG.warn("Build end triggered but span not found for build " + getBuildName(build) + " id " + build.getBuildId());
             }
-        } else {
-            LOG.warn(String.format("Build finished (or interrupted) for %s, id %d and plugin not ready.", getBuildName(build), build.getBuildId()));
         }
     }
 
@@ -273,22 +284,18 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     private void createQueuedEventsSpans(SRunningBuild build, Span buildSpan) {
         long startDateTime = build.getQueuedDate().getTime();
         Map<String, BigDecimal> reportedStatics = build.getStatisticValues();
-        LOG.info("Retrieving queued event spans for build " + getBuildName(build));
 
         for (Map.Entry<String,BigDecimal> entry : reportedStatics.entrySet()) {
             String key = entry.getKey();
-            LOG.debug("Queue item: " + key);
             if (key.contains("queueWaitReason:")) {
                 BigDecimal value = entry.getValue();
-                LOG.debug("Queue value: " + value);
                 var otelHelper = otelHelperFactory.getOTELHelper(getRootBuildInChain(build));
                 Span childSpan = otelHelper.createTransientSpan(key, buildSpan, startDateTime);
                 List<String> keySplitList = Pattern.compile(":")
                         .splitAsStream(key)
-                        .collect(Collectors.toList());
+                        .toList();
                 setSpanBuildAttributes(otelHelper, build, childSpan, keySplitList.get(1), keySplitList.get(0));
                 childSpan.end(startDateTime + value.longValue(), TimeUnit.MILLISECONDS);
-                LOG.debug("Queued span added");
                 startDateTime+= value.longValue();
             }
         }

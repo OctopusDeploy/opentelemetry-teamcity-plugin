@@ -269,22 +269,18 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     private void createQueuedEventsSpans(SRunningBuild build, Span buildSpan) {
         long startDateTime = build.getQueuedDate().getTime();
         Map<String, BigDecimal> reportedStatics = build.getStatisticValues();
-        LOG.info("Retrieving queued event spans for build " + getBuildName(build));
 
         for (Map.Entry<String,BigDecimal> entry : reportedStatics.entrySet()) {
             String key = entry.getKey();
-            LOG.debug("Queue item: " + key);
             if (key.contains("queueWaitReason:")) {
                 BigDecimal value = entry.getValue();
-                LOG.debug("Queue value: " + value);
                 var otelHelper = otelHelperFactory.getOTELHelper(getRootBuildInChain(build));
                 Span childSpan = otelHelper.createTransientSpan(key, buildSpan, startDateTime);
                 List<String> keySplitList = Pattern.compile(":")
                         .splitAsStream(key)
-                        .collect(Collectors.toList());
+                        .toList();
                 setSpanBuildAttributes(otelHelper, build, childSpan, keySplitList.get(1), keySplitList.get(0));
                 childSpan.end(startDateTime + value.longValue(), TimeUnit.MILLISECONDS);
-                LOG.debug("Queued span added");
                 startDateTime+= value.longValue();
             }
         }

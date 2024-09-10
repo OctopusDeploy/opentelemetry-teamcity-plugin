@@ -31,7 +31,6 @@ public class HelperPerBuildOTELHelperFactory implements OTELHelperFactory {
 
     public OTELHelper getOTELHelper(BuildPromotion build) {
         var buildId = build.getId();
-        LOG.debug(String.format("Getting OTELHelper for build %d.", buildId));
 
         return otelHelpers.computeIfAbsent(buildId, key -> {
             LOG.debug(String.format("Creating OTELHelper for build %d.", buildId));

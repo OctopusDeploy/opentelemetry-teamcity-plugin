@@ -64,19 +64,18 @@ public class TeamCityBuildListener extends BuildServerAdapter {
             return;
         }
 
-        var parentBuild = getRootBuildInChain(build);
-        var otelHelper = otelHelperFactory.getOTELHelper(parentBuild);
+        var rootBuildInChain = getRootBuildInChain(build);
+        var otelHelper = otelHelperFactory.getOTELHelper(rootBuildInChain);
         if (otelHelper.isReady()) {
-            var parentBuildId = parentBuild.getId();
-            LOG.debug(String.format("Root build of build id %d is %d", build.getBuildId(), parentBuildId));
+            var rootBuildInChainId = rootBuildInChain.getId();
+            LOG.debug(String.format("Root build of build id %d is %d", build.getBuildId(), rootBuildInChainId));
 
-            Span parentSpan = otelHelper.getOrCreateParentSpan(String.valueOf(parentBuildId));
-            Span span = otelHelper.createSpan(getBuildId(build), parentSpan);
-            LOG.debug(String.format("Span created for %s, id %d", getBuildName(build), build.getBuildId()));
+            Span rootSpan = otelHelper.getOrCreateParentSpan(String.valueOf(rootBuildInChainId));
+            buildStorageManager.saveTraceId(build, rootSpan.getSpanContext().getTraceId());
 
-            buildStorageManager.saveTraceId(build, span.getSpanContext().getTraceId());
+            var span = ensureSpansExistLinkingToRoot(otelHelper, build.getBuildPromotion(), rootBuildInChain);
 
-            try (Scope ignored = parentSpan.makeCurrent()) {
+            try (Scope ignored = rootSpan.makeCurrent()) {
                 setSpanBuildAttributes(otelHelper, build, span, getBuildName(build), BUILD_SERVICE_NAME);
                 span.addEvent(PluginConstants.EVENT_STARTED);
                 LOG.debug(String.format("%s event added to span for build %s, id %d", PluginConstants.EVENT_STARTED, getBuildName(build), build.getBuildId()));
@@ -91,6 +90,28 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         } else {
             LOG.info(String.format("Build start triggered for %s, id %d and plugin not ready. This build will not be traced.", getBuildName(build), build.getBuildId()));
         }
+    }
+
+    private Span ensureSpansExistLinkingToRoot(OTELHelper otelHelper, BuildPromotion buildPromotion, BuildPromotion rootBuildInChain) {
+        var parents = buildPromotion.getDependedOnMe();
+        for (var parent : parents) {
+            LOG.debug(String.format("Parents of build %d includes %d", buildPromotion.getId(), parent.getDependent().getId()));
+        }
+
+        if ((long) parents.size() == 0) {
+            LOG.debug(String.format("Build %d has no parent, meaning we it's the root; creating span if needed", buildPromotion.getId()));
+            return otelHelper.getOrCreateParentSpan(String.valueOf(rootBuildInChain.getId()));
+        }
+
+        //get the last one
+        var immediateParentBuild = parents.stream()
+                .reduce((first, second) -> second)
+                .orElseThrow()
+                .getDependent();
+        LOG.debug(String.format("Parent of build %d is %d", buildPromotion.getId(), immediateParentBuild.getId()));
+        var parentSpan = ensureSpansExistLinkingToRoot(otelHelper, immediateParentBuild, rootBuildInChain);
+        LOG.debug(String.format("Creating span for build %d, with parent id %d", buildPromotion.getId(), immediateParentBuild.getId()));
+        return otelHelper.createSpan(String.valueOf(buildPromotion.getId()), parentSpan);
     }
 
     private String getBuildId(SRunningBuild build) {
@@ -185,7 +206,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                         otelHelperFactory.release(build.getBuildId());
                 }
             } else {
-                LOG.warn("Build end triggered but span not found for build " + getBuildName(build));
+                LOG.warn("Build end triggered but span not found for build " + getBuildName(build) + " id " + build.getBuildId());
             }
         } else {
             LOG.warn(String.format("Build finished (or interrupted) for %s, id %d and plugin not ready.", getBuildName(build), build.getBuildId()));

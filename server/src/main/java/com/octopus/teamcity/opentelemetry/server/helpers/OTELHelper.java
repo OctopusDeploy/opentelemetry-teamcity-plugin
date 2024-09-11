@@ -7,7 +7,7 @@ public interface OTELHelper {
 
     Span getOrCreateParentSpan(String buildId);
 
-    Span createSpan(String spanName, Span parentSpan);
+    Span createSpan(String spanName, Span parentSpan, String parentSpanName);
 
     Span createTransientSpan(String spanName, Span parentSpan, long startTime);
 

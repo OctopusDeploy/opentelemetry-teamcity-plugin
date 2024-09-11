@@ -28,7 +28,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 public class TeamCityBuildListener extends BuildServerAdapter {
 
@@ -57,16 +56,12 @@ public class TeamCityBuildListener extends BuildServerAdapter {
 
     @Override
     public void buildStarted(@NotNull SRunningBuild build) {
-        LOG.debug(String.format("Build started method triggered for %s, id %d", getBuildName(build), build.getBuildId()));
-
-        if (!nodesService.getCurrentNode().isMainNode())
-        {
-            LOG.debug(String.format("This is not the main node - skipping OTEL tracing for %s (id %d) and leaving that responsibility for the main node to deal with", getBuildName(build), build.getBuildId()));
-            return;
-        }
+        if (!nodesService.getCurrentNode().isMainNode()) return;
 
         var rootBuildInChain = getRootBuildInChain(build);
         try (var ignored1 = CloseableThreadContext.put("teamcity.build.id", String.valueOf(build.getBuildId()))) {
+            LOG.debug(String.format("Build started method triggered for %s, id %d", getBuildName(build), build.getBuildId()));
+
             try (var ignored2 = CloseableThreadContext.put("teamcity.root.build.id", String.valueOf(rootBuildInChain.getId()))) {
 
                 var otelHelper = otelHelperFactory.getOTELHelper(rootBuildInChain);
@@ -116,8 +111,9 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 .getDependent();
         LOG.debug(String.format("Parent of build %d is %d", buildPromotion.getId(), immediateParentBuild.getId()));
         var parentSpan = ensureSpansExistLinkingToRoot(otelHelper, immediateParentBuild, rootBuildInChain);
+        var parentSpanName = String.valueOf(immediateParentBuild.getId());
         LOG.debug(String.format("Creating span for build %d, with parent id %d", buildPromotion.getId(), immediateParentBuild.getId()));
-        return otelHelper.createSpan(String.valueOf(buildPromotion.getId()), parentSpan);
+        return otelHelper.createSpan(String.valueOf(buildPromotion.getId()), parentSpan, parentSpanName);
     }
 
     private String getBuildId(SRunningBuild build) {
@@ -130,8 +126,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
 
     private BuildPromotion getRootBuildInChain(SRunningBuild build) {
         BuildPromotion[] parentBuilds = build.getBuildPromotion().findTops();
-        BuildPromotion parentBuildPromotion = parentBuilds[0];
-        return parentBuildPromotion;
+        return parentBuilds[0];
     }
 
     private void setSpanBuildAttributes(OTELHelper otelHelper, SRunningBuild build, Span span, String spanName, String serviceName) {
@@ -160,86 +155,104 @@ public class TeamCityBuildListener extends BuildServerAdapter {
 
     @Override
     public void buildFinished(@NotNull SRunningBuild build) {
-        LOG.debug(String.format("Build finished method triggered for %s", getBuildId(build)));
-        super.buildFinished(build);
-        buildFinishedOrInterrupted(build);
+        try (var ignored1 = CloseableThreadContext.put("teamcity.build.id", String.valueOf(build.getBuildId()))) {
+            LOG.debug(String.format("Build finished method triggered for %s", getBuildId(build)));
+            super.buildFinished(build);
+            buildFinishedOrInterrupted(build);
+        }
     }
 
     @Override
     public void buildInterrupted(@NotNull SRunningBuild build) {
-        LOG.debug(String.format("Build interrupted method triggered for %s", getBuildId(build)));
-        super.buildInterrupted(build);
-        buildFinishedOrInterrupted(build);
+        try (var ignored1 = CloseableThreadContext.put("teamcity.build.id", String.valueOf(build.getBuildId()))) {
+            LOG.debug(String.format("Build interrupted method triggered for %s", getBuildId(build)));
+            super.buildInterrupted(build);
+            buildFinishedOrInterrupted(build);
+        }
     }
 
     private void buildFinishedOrInterrupted (SRunningBuild build) {
         if (!nodesService.getCurrentNode().isMainNode()) return;
 
-        BuildStatistics buildStatistics = build.getBuildStatistics(
-                BuildStatisticsOptions.ALL_TESTS_NO_DETAILS);
+        BuildStatistics buildStatistics = build.getBuildStatistics(BuildStatisticsOptions.ALL_TESTS_NO_DETAILS);
 
         var rootBuildInChain = getRootBuildInChain(build);
 
-        try (var ignored1 = CloseableThreadContext.put("teamcity.build.id", String.valueOf(build.getBuildId()))) {
-            try (var ignored2 = CloseableThreadContext.put("teamcity.root.build.id", String.valueOf(rootBuildInChain.getId()))) {
-                var otelHelper = otelHelperFactory.getOTELHelper(rootBuildInChain);
-                if (otelHelper.isReady()) {
-                    if (otelHelper.getSpan(getBuildId(build)) != null) {
-                        Span span = otelHelper.getSpan(getBuildId(build));
-                        LOG.debug("Build finished and span found for " + getBuildName(build));
-                        try (Scope ignored3 = span.makeCurrent()) {
-                            createQueuedEventsSpans(build, span);
-                            createBuildStepSpans(build, span);
-                            createTestExecutionSpans(build, span);
-                            setArtifactAttributes(build, span);
+        try (var ignored2 = CloseableThreadContext.put("teamcity.root.build.id", String.valueOf(rootBuildInChain.getId()))) {
+            var otelHelper = otelHelperFactory.getOTELHelper(rootBuildInChain);
+            if (otelHelper.isReady()) {
+                var span = otelHelper.getSpan(getBuildId(build));
+                if (span != null) {
+                    LOG.debug("Build finished and span found for " + getBuildName(build));
+                    try (Scope ignored3 = span.makeCurrent()) {
+                        createQueuedEventsSpans(build, span);
+                        createBuildStepSpans(build, span);
+                        createTestExecutionSpans(build, span);
+                        setArtifactAttributes(build, span);
 
-                            otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_SUCCESS_STATUS, build.getBuildStatus().isSuccessful());
-                            otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_FAILED_TEST_COUNT, buildStatistics.getFailedTestCount());
-                            otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_PROBLEMS_COUNT, buildStatistics.getCompilationErrorsCount());
-                            if (this.checkoutTimeMap.containsKey(span.getSpanContext().getSpanId())) {
-                                otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_CHECKOUT_TIME, this.checkoutTimeMap.get(span.getSpanContext().getSpanId()));
-                                this.checkoutTimeMap.remove(span.getSpanContext().getSpanId());
-                            }
-                            span.addEvent(PluginConstants.EVENT_FINISHED);
-                            LOG.debug("" + PluginConstants.EVENT_FINISHED + " event added to span for build " + getBuildName(build));
-                        } catch (Exception e) {
-                            LOG.error("Exception in Build Finish caused by: " + e + e.getCause() +
-                                    ", with message: " + e.getMessage() +
-                                    ", and stacktrace: " + Arrays.toString(e.getStackTrace()));
-                            span.setStatus(StatusCode.ERROR, PluginConstants.EXCEPTION_ERROR_MESSAGE_DURING_BUILD_FINISH + ": " + e.getMessage());
-                        } finally {
-                            span.end();
-                            var buildId = getBuildId(build);
-                            otelHelper.removeSpan(buildId);
-                            if (buildId.equals(String.valueOf(getRootBuildInChain(build).getId())))
-                                otelHelperFactory.release(build.getBuildId());
+                        otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_SUCCESS_STATUS, build.getBuildStatus().isSuccessful());
+                        otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_FAILED_TEST_COUNT, buildStatistics.getFailedTestCount());
+                        otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_PROBLEMS_COUNT, buildStatistics.getCompilationErrorsCount());
+                        if (this.checkoutTimeMap.containsKey(span.getSpanContext().getSpanId())) {
+                            otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_BUILD_CHECKOUT_TIME, this.checkoutTimeMap.get(span.getSpanContext().getSpanId()));
+                            this.checkoutTimeMap.remove(span.getSpanContext().getSpanId());
                         }
-                    } else {
-                        LOG.warn("Build end triggered but span not found for build " + getBuildName(build) + " id " + build.getBuildId());
+                        span.addEvent(PluginConstants.EVENT_FINISHED);
+                        LOG.debug(PluginConstants.EVENT_FINISHED + " event added to span for build " + getBuildName(build));
+                    } catch (Exception e) {
+                        LOG.error("Exception in Build Finish caused by: " + e + e.getCause() +
+                                ", with message: " + e.getMessage() +
+                                ", and stacktrace: " + Arrays.toString(e.getStackTrace()));
+                        span.setStatus(StatusCode.ERROR, PluginConstants.EXCEPTION_ERROR_MESSAGE_DURING_BUILD_FINISH + ": " + e.getMessage());
+                    } finally {
+                        span.end();
+                        var buildId = getBuildId(build);
+                        otelHelper.removeSpan(buildId);
+                        if (buildId.equals(String.valueOf(getRootBuildInChain(build).getId())))
+                            otelHelperFactory.release(build.getBuildId());
                     }
                 } else {
-                    LOG.warn(String.format("Build finished (or interrupted) for %s, id %d and plugin not ready.", getBuildName(build), build.getBuildId()));
+                    LOG.warn("Build end triggered but span not found for build " + getBuildName(build) + " id " + build.getBuildId());
                 }
+            } else {
+                LOG.warn(String.format("Build finished (or interrupted) for %s, id %d and plugin not ready.", getBuildName(build), build.getBuildId()));
             }
         }
     }
 
     private void createTestExecutionSpans(SRunningBuild build, Span parentSpan) {
+        if (build.isCompositeBuild()) return;
+
         var buildStatistics = build.getBuildStatistics(
                 BuildStatisticsOptions.ALL_TESTS_NO_DETAILS);
 
         var tests = buildStatistics.getAllTests();
-        for (var test: tests) {
-            createTestExecutionSpan(build, test, parentSpan);
+        var otelHelper = otelHelperFactory.getOTELHelper(getRootBuildInChain(build));
+
+        if (!tests.isEmpty()) {
+            var startTime = build.convertToServerTime(Objects.requireNonNull(build.getClientStartDate())).getTime(); // epoch milliseconds
+            var testsSpan = otelHelper.createTransientSpan("Tests", parentSpan, startTime);
+
+            try {
+                for (var test : tests) {
+                    createTestExecutionSpan(otelHelper, build, test, testsSpan, startTime);
+                }
+            } finally {
+                var finishDate = build.getFinishDate();
+                if (finishDate != null) {
+                    var endTime = Objects.requireNonNull(finishDate).toInstant();
+                    testsSpan.end(endTime);
+                } else {
+                    testsSpan.end();
+                }
+            }
         }
 
     }
 
-    private void createTestExecutionSpan(SRunningBuild build, STestRun test, Span parentSpan) {
+    private void createTestExecutionSpan(OTELHelper otelHelper, SRunningBuild build, STestRun test, Span parentSpan, long startTime) {
         var durationMs = test.getDuration(); // milliseconds
         // For now, we are starting all tests in sync with their parent build. This isn't ideal, however the SDK doesn't expose test start/finish times here.
-        var testBuild = test.getBuild();
-        var startTime = testBuild.convertToServerTime(Objects.requireNonNull(testBuild.getClientStartDate())).getTime(); // epoch milliseconds
         var endTime = startTime + durationMs;
         var failed = test.getStatus().isFailed();
         var passed = test.getStatus() == Status.NORMAL;
@@ -262,7 +275,6 @@ public class TeamCityBuildListener extends BuildServerAdapter {
             humanReadableStatus = "ignored";
         }
 
-        var otelHelper = otelHelperFactory.getOTELHelper(getRootBuildInChain(build));
         Span childSpan = otelHelper.createTransientSpan(testName, parentSpan, startTime);
         otelHelper.addAttributeToSpan(childSpan, PluginConstants.ATTRIBUTE_TEST_STATUS, humanReadableStatus);
         otelHelper.addAttributeToSpan(childSpan, PluginConstants.ATTRIBUTE_TEST_PASSED_FLAG, passed);
@@ -298,8 +310,8 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     }
 
     private void createBuildStepSpans(SRunningBuild build, Span buildSpan) {
+        if (build.isCompositeBuild()) return;
         Map<String, Span> blockMessageSpanMap = new HashMap<>();
-        LOG.info("Retrieving build step event spans for build " + getBuildName(build));
         List<LogMessage> buildBlockLogs = getBuildBlockLogs(build);
         for (LogMessage logMessage: buildBlockLogs) {
             BlockLogMessage blockLogMessage = (BlockLogMessage) logMessage;
@@ -308,9 +320,13 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     }
 
     private void createBlockMessageSpan(BlockLogMessage blockLogMessage, Span buildSpan, Map<String, Span> blockMessageSpanMap, SRunningBuild build) {
+        if (blockLogMessage.getBlockType().equals("$TEST_BLOCK$")) {
+            //we handle these explicitly when we publish tests (in createTestExecutionSpans)
+            return;
+        }
+
         Date blockMessageFinishDate = blockLogMessage.getFinishDate();
         String blockMessageStepName = blockLogMessage.getText() + " " + blockMessageFinishDate;
-        LOG.debug("Build Step " + blockMessageStepName);
         if (blockMessageFinishDate != null) { // This filters out creating duplicate spans for Builds from their build blockMessages
             BlockLogMessage parentBlockMessage = blockLogMessage.getParent();
             Span parentSpan;
@@ -327,7 +343,6 @@ public class TeamCityBuildListener extends BuildServerAdapter {
             Span childSpan = otelHelper.createTransientSpan(blockMessageStepName, parentSpan, blockLogMessage.getTimestamp().getTime());
             otelHelper.addAttributeToSpan(childSpan, PluginConstants.ATTRIBUTE_BUILD_STEP_STATUS, blockLogMessage.getStatus());
             blockMessageSpanMap.put(blockMessageStepName, childSpan);
-            LOG.debug("Build step span added for " + blockMessageStepName);
             String spanName;
             if (blockLogMessage.getBlockDescription() != null) {
                 // Only the Build Step Types "teamcity-build-step-type" has blockDescriptions
@@ -358,7 +373,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     private List<LogMessage> getBuildBlockLogs(SRunningBuild build) {
         List<LogMessage> buildLogs = build.getBuildLog().getFilteredMessages(new LogMessageFilter() {
             @Override
-            public boolean acceptMessage(LogMessage message, boolean lastMessageInParent) {
+            public boolean acceptMessage(@NotNull LogMessage message, boolean lastMessageInParent) {
                 return message instanceof BlockLogMessage;
             }
         });
@@ -367,6 +382,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     }
 
     private void setArtifactAttributes(SRunningBuild build, Span span) {
+        if (build.isCompositeBuild()) return;
         LOG.debug("Retrieving build artifact attributes for build: " + getBuildName(build) + " with id: " + getBuildId(build));
         AtomicLong buildTotalArtifactSize = new AtomicLong();
         BuildArtifacts buildArtifacts = build.getArtifacts(BuildArtifactsViewMode.VIEW_DEFAULT);

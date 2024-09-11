@@ -14,7 +14,7 @@ public class NullOTELHelperImpl implements OTELHelper {
     }
 
     @Override
-    public Span createSpan(String spanName, Span parentSpan) {
+    public Span createSpan(String spanName, Span parentSpan, String parentSpanName) {
         return null;
     }
 

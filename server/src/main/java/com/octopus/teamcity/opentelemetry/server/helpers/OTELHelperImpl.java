@@ -51,8 +51,8 @@ public class OTELHelperImpl implements OTELHelper {
     }
 
     @Override
-    public Span createSpan(String spanName, Span parentSpan) {
-        LOG.info("Creating child span " + spanName + " under parent " + parentSpan);
+    public Span createSpan(String spanName, Span parentSpan, String parentSpanName) {
+        LOG.info("Creating child span " + spanName + " under parent " + parentSpanName);
         return this.spanMap.computeIfAbsent(spanName, key -> this.tracer
                 .spanBuilder(spanName)
                 .setParent(Context.current().with(parentSpan))
@@ -79,7 +79,6 @@ public class OTELHelperImpl implements OTELHelper {
 
     @Override
     public void addAttributeToSpan(Span span, String attributeName, Object attributeValue) {
-        LOG.debug("Adding attribute to span " + attributeName + "=" + attributeValue);
         span.setAttribute(attributeName, attributeValue.toString());
     }
 

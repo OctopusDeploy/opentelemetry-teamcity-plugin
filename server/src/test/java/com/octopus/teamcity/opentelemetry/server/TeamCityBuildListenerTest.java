@@ -58,7 +58,7 @@ class TeamCityBuildListenerTest {
         // Act
         this.buildListener.buildStarted(build);
         Span builtSpan = this.otelHelper.getSpan(String.valueOf(build.getBuildId()));
-        Span expectedSpan = this.otelHelper.createSpan(String.valueOf(build.getBuildId()), builtSpan);
+        Span expectedSpan = this.otelHelper.createSpan(String.valueOf(build.getBuildId()), builtSpan, "parentSpanName");
 
         // Assert
         assertEquals(expectedSpan, builtSpan);
@@ -95,7 +95,7 @@ class TeamCityBuildListenerTest {
         this.buildListener.buildStarted(build);
         Span parentSpan = this.otelHelper.getOrCreateParentSpan(String.valueOf(parentBuild.getBuildId()));
         Span builtSpan = this.otelHelper.getSpan(String.valueOf(build.getBuildId()));
-        Span expectedSpan = this.otelHelper.createSpan(String.valueOf(build.getBuildId()), parentSpan);
+        Span expectedSpan = this.otelHelper.createSpan(String.valueOf(build.getBuildId()), parentSpan, "parentSpanName");
 
         // Assert
         assertEquals(expectedSpan, builtSpan);

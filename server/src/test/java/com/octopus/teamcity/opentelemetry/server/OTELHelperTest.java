@@ -62,7 +62,7 @@ class OTELHelperTest {
         // Arrange
         SRunningBuild build = mock(SRunningBuild.class, RETURNS_DEEP_STUBS);
         Span parentSpan = createParentSpanForTest(build);
-        Span expectedSpan = this.otelHelper.createSpan(String.valueOf(build.getBuildId()), parentSpan);
+        Span expectedSpan = this.otelHelper.createSpan(String.valueOf(build.getBuildId()), parentSpan, "parentSpanName");
 
         // Act
         Span actualSpan = this.otelHelper.getSpan(String.valueOf(build.getBuildId()));
@@ -96,7 +96,7 @@ class OTELHelperTest {
         // Arrange
         SRunningBuild build = mock(SRunningBuild.class, RETURNS_DEEP_STUBS);
         Span parentSpan = createParentSpanForTest(build);
-        this.otelHelper.createSpan(String.valueOf(build.getBuildId()), parentSpan);
+        this.otelHelper.createSpan(String.valueOf(build.getBuildId()), parentSpan, "parentSpanName");
 
         // Act
         this.otelHelper.removeSpan(String.valueOf(build.getBuildId()));
@@ -110,7 +110,7 @@ class OTELHelperTest {
         // Arrange
         SRunningBuild build = mock(SRunningBuild.class, RETURNS_DEEP_STUBS);
         Span parentSpan = createParentSpanForTest(build);
-        this.otelHelper.createSpan(String.valueOf(build.getBuildId()), parentSpan);
+        this.otelHelper.createSpan(String.valueOf(build.getBuildId()), parentSpan, "parentSpanName");
 
         // Act
         Span expectedSpan = this.otelHelper.getSpan(String.valueOf(build.getBuildId()));

@@ -2,6 +2,8 @@ package com.octopus.teamcity.opentelemetry.server.helpers;
 
 import io.opentelemetry.api.trace.Span;
 
+import javax.annotation.Nullable;
+
 public class NullOTELHelperImpl implements OTELHelper {
     @Override
     public boolean isReady() {
@@ -28,6 +30,7 @@ public class NullOTELHelperImpl implements OTELHelper {
     }
 
     @Override
+    @Nullable
     public Span getSpan(String buildId) {
         return null;
     }
@@ -37,6 +40,6 @@ public class NullOTELHelperImpl implements OTELHelper {
     }
 
     @Override
-    public void release() {
+    public void release(String helperName) {
     }
 }

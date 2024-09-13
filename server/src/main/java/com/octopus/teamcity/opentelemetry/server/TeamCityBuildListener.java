@@ -60,7 +60,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
 
         var rootBuildInChain = getRootBuildInChain(build);
         try (var ignored1 = CloseableThreadContext.put("teamcity.build.id", String.valueOf(build.getBuildId()))) {
-            LOG.debug(String.format("Build started method triggered for %s, id %d", getBuildName(build), build.getBuildId()));
+            LOG.debug(String.format("Build started method triggered for '%s', id %d", getBuildName(build), build.getBuildId()));
 
             try (var ignored2 = CloseableThreadContext.put("teamcity.root.build.id", String.valueOf(rootBuildInChain.getId()))) {
 
@@ -77,7 +77,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                     try (Scope ignored3 = rootSpan.makeCurrent()) {
                         setSpanBuildAttributes(otelHelper, build, span, getBuildName(build), BUILD_SERVICE_NAME);
                         span.addEvent(PluginConstants.EVENT_STARTED);
-                        LOG.debug(String.format("%s event added to span for build %s, id %d", PluginConstants.EVENT_STARTED, getBuildName(build), build.getBuildId()));
+                        LOG.debug(String.format("%s event added to span for build '%s', id %d", PluginConstants.EVENT_STARTED, getBuildName(build), build.getBuildId()));
                     } catch (Exception e) {
                         LOG.error("Exception in Build Start caused by: " + e + e.getCause() +
                                 ", with message: " + e.getMessage() +
@@ -87,7 +87,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                         }
                     }
                 } else {
-                    LOG.info(String.format("Build start triggered for %s, id %d and plugin not ready. This build will not be traced.", getBuildName(build), build.getBuildId()));
+                    LOG.info(String.format("Build start triggered for '%s', id %d and plugin not ready. This build will not be traced.", getBuildName(build), build.getBuildId()));
                 }
             }
         }
@@ -183,7 +183,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
             if (otelHelper.isReady()) {
                 var span = otelHelper.getSpan(getBuildId(build));
                 if (span != null) {
-                    LOG.debug("Build finished and span found for " + getBuildName(build));
+                    LOG.debug("Build finished and span found for '" + getBuildName(build) + "'");
                     try (Scope ignored3 = span.makeCurrent()) {
                         createQueuedEventsSpans(build, span);
                         createBuildStepSpans(build, span);
@@ -198,7 +198,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                             this.checkoutTimeMap.remove(span.getSpanContext().getSpanId());
                         }
                         span.addEvent(PluginConstants.EVENT_FINISHED);
-                        LOG.debug(PluginConstants.EVENT_FINISHED + " event added to span for build " + getBuildName(build));
+                        LOG.debug(PluginConstants.EVENT_FINISHED + " event added to span for build '" + getBuildName(build) + "' id " + build.getBuildId());
                     } catch (Exception e) {
                         LOG.error("Exception in Build Finish caused by: " + e + e.getCause() +
                                 ", with message: " + e.getMessage() +
@@ -212,10 +212,10 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                             otelHelperFactory.release(build.getBuildId());
                     }
                 } else {
-                    LOG.warn("Build end triggered but span not found for build " + getBuildName(build) + " id " + build.getBuildId());
+                    LOG.warn("Build end triggered but span not found for build '" + getBuildName(build) + "' id " + build.getBuildId());
                 }
             } else {
-                LOG.warn(String.format("Build finished (or interrupted) for %s, id %d and plugin not ready.", getBuildName(build), build.getBuildId()));
+                LOG.warn(String.format("Build finished (or interrupted) for '%s', id %d and plugin not ready.", getBuildName(build), build.getBuildId()));
             }
         }
     }
@@ -383,7 +383,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
 
     private void setArtifactAttributes(SRunningBuild build, Span span) {
         if (build.isCompositeBuild()) return;
-        LOG.debug("Retrieving build artifact attributes for build: " + getBuildName(build) + " with id: " + getBuildId(build));
+        LOG.debug("Retrieving build artifact attributes for build '" + getBuildName(build) + "' with id: " + getBuildId(build));
         AtomicLong buildTotalArtifactSize = new AtomicLong();
         BuildArtifacts buildArtifacts = build.getArtifacts(BuildArtifactsViewMode.VIEW_DEFAULT);
         buildArtifacts.iterateArtifacts(artifact -> {

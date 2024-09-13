@@ -187,7 +187,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                     try (Scope ignored3 = span.makeCurrent()) {
                         createQueuedEventsSpans(build, span);
                         createBuildStepSpans(build, span);
-                        createTestExecutionSpans(build, span);
+                        createTestExecutionSpans(build, span, getBuildName(build));
                         setArtifactAttributes(build, span);
 
                         otelHelper.addAttributeToSpan(span, PluginConstants.ATTRIBUTE_SUCCESS_STATUS, build.getBuildStatus().isSuccessful());
@@ -220,7 +220,7 @@ public class TeamCityBuildListener extends BuildServerAdapter {
         }
     }
 
-    private void createTestExecutionSpans(SRunningBuild build, Span parentSpan) {
+    private void createTestExecutionSpans(SRunningBuild build, Span parentSpan, String parentSpanName) {
         if (build.isCompositeBuild()) return;
 
         var buildStatistics = build.getBuildStatistics(
@@ -231,12 +231,18 @@ public class TeamCityBuildListener extends BuildServerAdapter {
 
         if (!tests.isEmpty()) {
             var startTime = build.convertToServerTime(Objects.requireNonNull(build.getClientStartDate())).getTime(); // epoch milliseconds
-            var testsSpan = otelHelper.createTransientSpan("Tests", parentSpan, startTime);
+            var spanName = "Tests";
+            LOG.info("Creating child span '" + spanName + "' under parent " + parentSpanName);
+
+            var testsSpan = otelHelper.createTransientSpan(spanName, parentSpan, startTime);
+            setSpanBuildAttributes(otelHelper, build, testsSpan, spanName, "tests-execution");
 
             try {
+                LOG.info("Creating " + tests.size() + " test spans under '" + parentSpanName + "' > '" + spanName + "'");
                 for (var test : tests) {
                     createTestExecutionSpan(otelHelper, build, test, testsSpan, startTime);
                 }
+                LOG.info("Created " + tests.size() + " test spans under '" + parentSpanName + "' > '" + spanName + "'");
             } finally {
                 var finishDate = build.getFinishDate();
                 if (finishDate != null) {

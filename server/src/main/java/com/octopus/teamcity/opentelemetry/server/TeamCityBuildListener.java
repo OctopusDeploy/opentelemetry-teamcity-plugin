@@ -58,38 +58,42 @@ public class TeamCityBuildListener extends BuildServerAdapter {
     public void buildStarted(@NotNull SRunningBuild build) {
         if (!nodesService.getCurrentNode().isMainNode()) return;
 
-        var rootBuildInChain = getRootBuildInChain(build);
-        try (var ignored1 = CloseableThreadContext.put("teamcity.build.id", String.valueOf(build.getBuildId()))) {
-            LOG.debug(String.format("Build started method triggered for '%s', id %d", getBuildName(build), build.getBuildId()));
+        try {
+            var rootBuildInChain = getRootBuildInChain(build);
+            try (var ignored1 = CloseableThreadContext.put("teamcity.build.id", String.valueOf(build.getBuildId()))) {
+                LOG.debug(String.format("Build started method triggered for '%s', id %d", getBuildName(build), build.getBuildId()));
 
-            try (var ignored2 = CloseableThreadContext.put("teamcity.root.build.id", String.valueOf(rootBuildInChain.getId()))) {
+                try (var ignored2 = CloseableThreadContext.put("teamcity.root.build.id", String.valueOf(rootBuildInChain.getId()))) {
 
-                var otelHelper = otelHelperFactory.getOTELHelper(rootBuildInChain);
-                if (otelHelper.isReady()) {
-                    var rootBuildInChainId = rootBuildInChain.getId();
-                    LOG.debug(String.format("Root build of build id %d is %d", build.getBuildId(), rootBuildInChainId));
+                    var otelHelper = otelHelperFactory.getOTELHelper(rootBuildInChain);
+                    if (otelHelper.isReady()) {
+                        var rootBuildInChainId = rootBuildInChain.getId();
+                        LOG.debug(String.format("Root build of build id %d is %d", build.getBuildId(), rootBuildInChainId));
 
-                    Span rootSpan = otelHelper.getOrCreateParentSpan(String.valueOf(rootBuildInChainId));
-                    buildStorageManager.saveTraceId(build, rootSpan.getSpanContext().getTraceId());
+                        Span rootSpan = otelHelper.getOrCreateParentSpan(String.valueOf(rootBuildInChainId));
+                        buildStorageManager.saveTraceId(build, rootSpan.getSpanContext().getTraceId());
 
-                    var span = ensureSpansExistLinkingToRoot(otelHelper, build.getBuildPromotion(), rootBuildInChain);
+                        var span = ensureSpansExistLinkingToRoot(otelHelper, build.getBuildPromotion(), rootBuildInChain);
 
-                    try (Scope ignored3 = rootSpan.makeCurrent()) {
-                        setSpanBuildAttributes(otelHelper, build, span, getBuildName(build), BUILD_SERVICE_NAME);
-                        span.addEvent(PluginConstants.EVENT_STARTED);
-                        LOG.debug(String.format("%s event added to span for build '%s', id %d", PluginConstants.EVENT_STARTED, getBuildName(build), build.getBuildId()));
-                    } catch (Exception e) {
-                        LOG.error("Exception in Build Start caused by: " + e + e.getCause() +
-                                ", with message: " + e.getMessage() +
-                                ", and stacktrace: " + Arrays.toString(e.getStackTrace()));
-                        if (span != null) {
-                            span.setStatus(StatusCode.ERROR, PluginConstants.EXCEPTION_ERROR_MESSAGE_DURING_BUILD_START + ": " + e.getMessage());
+                        try (Scope ignored3 = rootSpan.makeCurrent()) {
+                            setSpanBuildAttributes(otelHelper, build, span, getBuildName(build), BUILD_SERVICE_NAME);
+                            span.addEvent(PluginConstants.EVENT_STARTED);
+                            LOG.debug(String.format("%s event added to span for build '%s', id %d", PluginConstants.EVENT_STARTED, getBuildName(build), build.getBuildId()));
+                        } catch (Exception e) {
+                            LOG.error("Exception in Build Start caused by: " + e + e.getCause() +
+                                    ", with message: " + e.getMessage() +
+                                    ", and stacktrace: " + Arrays.toString(e.getStackTrace()));
+                            if (span != null) {
+                                span.setStatus(StatusCode.ERROR, PluginConstants.EXCEPTION_ERROR_MESSAGE_DURING_BUILD_START + ": " + e.getMessage());
+                            }
                         }
+                    } else {
+                        LOG.info(String.format("Build start triggered for '%s', id %d and plugin not ready. This build will not be traced.", getBuildName(build), build.getBuildId()));
                     }
-                } else {
-                    LOG.info(String.format("Build start triggered for '%s', id %d and plugin not ready. This build will not be traced.", getBuildName(build), build.getBuildId()));
                 }
             }
+        } catch (Exception e) {
+            LOG.error("Exception in buildStarted caused by: " + e.getMessage(), e);
         }
     }
 
@@ -155,19 +159,27 @@ public class TeamCityBuildListener extends BuildServerAdapter {
 
     @Override
     public void buildFinished(@NotNull SRunningBuild build) {
-        try (var ignored1 = CloseableThreadContext.put("teamcity.build.id", String.valueOf(build.getBuildId()))) {
-            LOG.debug(String.format("Build finished method triggered for %s", getBuildId(build)));
-            super.buildFinished(build);
-            buildFinishedOrInterrupted(build);
+        try {
+            try (var ignored1 = CloseableThreadContext.put("teamcity.build.id", String.valueOf(build.getBuildId()))) {
+                LOG.debug(String.format("Build finished method triggered for %s", getBuildId(build)));
+                super.buildFinished(build);
+                buildFinishedOrInterrupted(build);
+            }
+        } catch (Exception e) {
+            LOG.error("Exception in buildFinished caused by: " + e.getMessage(), e);
         }
     }
 
     @Override
     public void buildInterrupted(@NotNull SRunningBuild build) {
-        try (var ignored1 = CloseableThreadContext.put("teamcity.build.id", String.valueOf(build.getBuildId()))) {
-            LOG.debug(String.format("Build interrupted method triggered for %s", getBuildId(build)));
-            super.buildInterrupted(build);
-            buildFinishedOrInterrupted(build);
+        try {
+            try (var ignored1 = CloseableThreadContext.put("teamcity.build.id", String.valueOf(build.getBuildId()))) {
+                LOG.debug(String.format("Build interrupted method triggered for %s", getBuildId(build)));
+                super.buildInterrupted(build);
+                buildFinishedOrInterrupted(build);
+            }
+        } catch (Exception e) {
+            LOG.error("Exception in buildInterrupted caused by: " + e.getMessage(), e);
         }
     }
 
@@ -340,10 +352,19 @@ public class TeamCityBuildListener extends BuildServerAdapter {
                 if (parentBlockMessage.getBlockType().equals(DefaultMessagesInfo.BLOCK_TYPE_BUILD)) {
                     parentSpan = buildSpan;
                 } else {
-                    parentSpan = blockMessageSpanMap.get(parentBlockMessage.getText() + " " + parentBlockMessage.getFinishDate());
+                    var parentBlockMessageKey = parentBlockMessage.getText() + " " + parentBlockMessage.getFinishDate();
+                    parentSpan = blockMessageSpanMap.get(parentBlockMessageKey);
+                    if (parentSpan == null) {
+                        LOG.warn("Attempted to find span in map using key '" + parentBlockMessageKey + "', but it was not found; using buildspan instead");
+                        parentSpan = buildSpan;
+                    }
                 }
             } else {
                 parentSpan = buildSpan;
+            }
+            if (parentSpan == null) {
+                LOG.error("Parent span is null; not creating block message spans for '" + blockMessageStepName + "'");
+                return;
             }
             var otelHelper = otelHelperFactory.getOTELHelper(getRootBuildInChain(build));
             Span childSpan = otelHelper.createTransientSpan(blockMessageStepName, parentSpan, blockLogMessage.getTimestamp().getTime());

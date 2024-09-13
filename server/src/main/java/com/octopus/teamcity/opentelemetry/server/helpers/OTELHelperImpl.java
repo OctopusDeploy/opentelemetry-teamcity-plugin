@@ -15,6 +15,7 @@ import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
 import org.apache.log4j.Logger;
 
+import javax.annotation.Nullable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -24,8 +25,10 @@ public class OTELHelperImpl implements OTELHelper {
     private final Tracer tracer;
     private final ConcurrentHashMap<String, Span> spanMap;
     private final SdkTracerProvider sdkTracerProvider;
+    private final String helperName;
 
-    public OTELHelperImpl(SpanProcessor spanProcessor) {
+    public OTELHelperImpl(SpanProcessor spanProcessor, String helperName) {
+        this.helperName = helperName;
         Resource serviceNameResource = Resource
                 .create(Attributes.of(ResourceAttributes.SERVICE_NAME, PluginConstants.SERVICE_NAME));
         this.sdkTracerProvider = SdkTracerProvider.builder()
@@ -68,13 +71,14 @@ public class OTELHelperImpl implements OTELHelper {
     }
 
     @Override
-    public void removeSpan(String buildId) {
-        this.spanMap.remove(buildId);
+    public void removeSpan(String spanName) {
+        this.spanMap.remove(spanName);
     }
 
     @Override
-    public Span getSpan(String buildId) {
-        return this.spanMap.get(buildId);
+    @Nullable
+    public Span getSpan(String spanName) {
+        return this.spanMap.get(spanName);
     }
 
     @Override
@@ -83,7 +87,9 @@ public class OTELHelperImpl implements OTELHelper {
     }
 
     @Override
-    public void release() {
+    public void release(String helperName) {
+        LOG.info("Cleaning up OTELHelperImpl named '" + helperName + "'; there are still " + this.spanMap.size() + " spans in the map");
+
         this.sdkTracerProvider.forceFlush();
         this.sdkTracerProvider.close();
         this.spanMap.clear();

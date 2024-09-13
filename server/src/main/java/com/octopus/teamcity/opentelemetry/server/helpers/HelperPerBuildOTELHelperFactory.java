@@ -49,7 +49,7 @@ public class HelperPerBuildOTELHelperFactory implements OTELHelperFactory {
                     spanProcessor = otelHandler.buildSpanProcessor(endpoint, params);
 
                     long startTime = System.nanoTime();
-                    var otelHelper = new OTELHelperImpl(spanProcessor);
+                    var otelHelper = new OTELHelperImpl(spanProcessor, String.valueOf(buildId));
                     long endTime = System.nanoTime();
 
                     long duration = (endTime - startTime);
@@ -67,7 +67,7 @@ public class HelperPerBuildOTELHelperFactory implements OTELHelperFactory {
     public void release(Long buildId) {
         var helper = otelHelpers.get(buildId);
         if (helper != null) {
-            helper.release();
+            helper.release(String.valueOf(buildId));
             otelHelpers.remove(buildId);
         }
     }

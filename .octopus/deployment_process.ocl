@@ -48,7 +48,7 @@ step "create-github-release" {
             GHCR_ContentType = "application/zip"
             GHCR_Draft = "False"
             GHCR_GitHubApiKey = "#{GitHubAccessToken}"
-            GHCR_GitHubRepository = "opentelemetry-teamcity-plugin"
+            GHCR_GitHubRepository = "teamcity-opentelemetry-plugin"
             GHCR_GitHubUsername = "OctopusDeploy"
             GHCR_PackageId = "{\"PackageId\":\"Octopus.TeamCity.OpenTelemetry\",\"FeedId\":\"octopus-server-built-in\"}"
             GHCR_PreRelease = "#{IsPreRelease}"

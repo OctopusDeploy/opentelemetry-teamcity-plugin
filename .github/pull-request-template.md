@@ -6,7 +6,7 @@
 
 <!-- Describe the result of the change including a link to any resolved issues. -->
 
-Fixes https://github.com/OctopusDeploy/opentelemetry-teamcity-plugin /issues/...
+Fixes https://github.com/OctopusDeploy/teamcity-opentelemetry-plugin /issues/...
 
 <!-- Consider adding a before/after log excerpt or screen capture. -->
 

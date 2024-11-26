@@ -1,4 +1,4 @@
-rootProject.name = 'octopusteamcityplugin'
+rootProject.name = 'teamcity-opentelemetry-plugin'
 include ':server'
 include ':common'
 

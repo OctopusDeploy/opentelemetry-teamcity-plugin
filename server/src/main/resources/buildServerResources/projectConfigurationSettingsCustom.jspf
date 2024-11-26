@@ -1,0 +1,47 @@
+<tr id="customHeaders" <c:if test='${otelService != "custom"}'>style="display: none"</c:if>>
+    <th><label>Headers:</label></th>
+    <td>
+        <table class="highlightable parametersTable">
+            <tr style="background-color: #f7f9fa;">
+                <th style="width: 20%">Name</th>
+                <th style="width: 20%">Type</th>
+                <th style="width: 40%">Value</th>
+                <th style="width: 20%">Actions</th>
+            </tr>
+            <c:if test="${not empty otelHeaders}">
+                <c:forEach var="otelHeader" items="${otelHeaders}" varStatus="status">
+                    <tr>
+                        <td>
+                            <%-- todo: consider changing to forms:textfield --%>
+                            <input type="text" name="headerKey_${status.index}" value="${otelHeader.getKey()}" class="textField">
+                        </td>
+                        <td>
+                            <select name="headerType_${status.index}" onchange="BS.ProjectConfigurationSettings.headerTypeChanged(this)">
+                                <option value='plaintext' <c:if test='${otelHeader.getType() == "plaintext"}'>selected="selected"</c:if>>Text</option>
+                                <option value='password' <c:if test='${otelHeader.getType() == "password"}'>selected="selected"</c:if>>Password</option>
+                            </select>
+                        </td>
+                        <td>
+                            <c:if test='${otelHeader.getType() == "plaintext"}'>
+                                <input type="text" name="headerValue_${status.index}" value="${otelHeader.getValue()}" class="textField longField" size="100">
+                            </c:if>
+                            <c:if test='${otelHeader.getType() == "password"}'>
+                                <forms:passwordField className="textField longField" name="headerValue_${status.index}" id="headerValue_${status.index}" encryptedPassword="${otelHeader.getEncryptedValue()}"/>
+                            </c:if>
+                        </td>
+                        <td>
+                            <%-- todo: buttons dont disable on save --%>
+                            <forms:button onclick="BS.ProjectConfigurationSettings.removeHeader(this)">Remove</forms:button>
+                        </td>
+                    </tr>
+                </c:forEach>
+            </c:if>
+            <tr>
+                <td colspan="3">
+                    <forms:addButton onclick="BS.ProjectConfigurationSettings.addHeader(this, ${otelHeaders.size()})">Add Header</forms:addButton>
+                </td>
+            </tr>
+        </table>
+        <span class="error" id="error_headers"></span>
+    </td>
+</tr>

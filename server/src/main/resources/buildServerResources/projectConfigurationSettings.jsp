@@ -44,7 +44,7 @@
                 <tr>
                     <th><label for="service">Service:&nbsp;<span class="mandatoryAsterix" title="Mandatory field">*</span></label></th>
                     <td>
-                        <%-- todo: load options from server side instead of hardcoding--%>
+                        <%-- todo: load available service types from server side instead of hardcoding--%>
                         <%-- todo: add options for jaeger --%>
                         <select name="service" id="service" onchange="BS.ProjectConfigurationSettings.serviceChanged(this)">
                             <option value="honeycomb.io" <c:if test='${otelService == "honeycomb.io"}'>selected="selected"</c:if>>Honeycomb.io</option>
@@ -54,82 +54,10 @@
                         <span class="error" id="error_service"></span>
                     </td>
                 </tr>
-                <%-- todo: NOW extract these fields to separate classes--%>
-                <tr <c:if test='${otelService == "honeycomb.io"}'>style="display: none"</c:if>>
-                    <th><label for="endpoint">Endpoint:&nbsp;<span class="mandatoryAsterix" title="Mandatory field">*</span></label></th>
-                    <td>
-                        <input type="text" name="endpoint" id="endpoint" value="${otelEndpoint}" class="textField longField">
-                        <span class="error" id="error_endpoint"></span>
-                    </td>
-                </tr>
-                <tr <c:if test='${otelService != "honeycomb.io"}'>style="display: none"</c:if>>
-                    <th><label for="honeycombApiKey">API Key:&nbsp;<span class="mandatoryAsterix" title="Mandatory field">*</span></label></th>
-                    <td>
-                        <forms:passwordField className="textField longField" name="honeycombApiKey" id="honeycombApiKey" encryptedPassword="${otelHoneycombApiKey}"/>
-                        <span class="error" id="error_honeycombApiKey"></span>
-                    </td>
-                </tr>
-                <tr <c:if test='${otelService != "honeycomb.io"}'>style="display: none"</c:if>>
-                    <th><label for="honeycombTeam">Team:&nbsp;<span class="mandatoryAsterix" title="Mandatory field">*</span></label></th>
-                    <td>
-                        <input type="text" name="honeycombTeam" id="honeycombTeam" value="${otelHoneycombTeam}" class="textField longField">
-                        <span class="error" id="error_honeycombTeam"></span>
-                    </td>
-                </tr>
-                <tr <c:if test='${otelService != "honeycomb.io"}'>style="display: none"</c:if>>
-                    <th><label for="honeycombDataset">Dataset:&nbsp;<span class="mandatoryAsterix" title="Mandatory field">*</span></label></th>
-                    <td>
-                        <input type="text" name="honeycombDataset" id="honeycombDataset" value="${otelHoneycombDataset}" class="textField longField">
-                        <span class="error" id="error_honeycombDataset"></span>
-                    </td>
-                </tr>
-                <tr id="customHeaders" <c:if test='${otelService != "custom"}'>style="display: none"</c:if>>
-                    <th><label>Headers:</label></th>
-                    <td>
-                        <table class="highlightable parametersTable">
-                            <tr style="background-color: #f7f9fa;">
-                                <th style="width: 20%">Name</th>
-                                <th style="width: 20%">Type</th>
-                                <th style="width: 40%">Value</th>
-                                <th style="width: 20%">Actions</th>
-                            </tr>
-                            <c:if test="${not empty otelHeaders}">
-                                <c:forEach var="otelHeader" items="${otelHeaders}" varStatus="status">
-                                    <tr>
-                                        <td>
-                                            <%-- todo: consider changing to forms:textfield --%>
-                                            <input type="text" name="headerKey_${status.index}" value="${otelHeader.getKey()}" class="textField">
-                                        </td>
-                                        <td>
-                                            <select name="headerType_${status.index}" onchange="BS.ProjectConfigurationSettings.headerTypeChanged(this)">
-                                               <option value='plaintext' <c:if test='${otelHeader.getType() == "plaintext"}'>selected="selected"</c:if>>Text</option>
-                                               <option value='password' <c:if test='${otelHeader.getType() == "password"}'>selected="selected"</c:if>>Password</option>
-                                           </select>
-                                        </td>
-                                        <td>
-                                            <c:if test='${otelHeader.getType() == "plaintext"}'>
-                                                <input type="text" name="headerValue_${status.index}" value="${otelHeader.getValue()}" class="textField longField" size="100">
-                                            </c:if>
-                                            <c:if test='${otelHeader.getType() == "password"}'>
-                                                <forms:passwordField className="textField longField" name="headerValue_${status.index}" id="headerValue_${status.index}" encryptedPassword="${otelHeader.getEncryptedValue()}"/>
-                                            </c:if>
-                                        </td>
-                                        <td>
-                                            <%-- todo: buttons dont disable on save --%>
-                                            <forms:button onclick="BS.ProjectConfigurationSettings.removeHeader(this)">Remove</forms:button>
-                                        </td>
-                                    </tr>
-                                </c:forEach>
-                            </c:if>
-                            <tr>
-                                <td colspan="3">
-                                    <forms:addButton onclick="BS.ProjectConfigurationSettings.addHeader(this, ${otelHeaders.size()})">Add Header</forms:addButton>
-                                </td>
-                            </tr>
-                        </table>
-                        <span class="error" id="error_headers"></span>
-                    </td>
-                </tr>
+                <!-- todo: do this smarter -->
+                <%@ include file="projectConfigurationSettingsHoneycomb.jspf" %>
+                <%@ include file="projectConfigurationSettingsZipkin.jspf" %>
+                <%@ include file="projectConfigurationSettingsCustom.jspf" %>
             </table>
 
             <div class="saveButtonsBlock" id="saveButtons">

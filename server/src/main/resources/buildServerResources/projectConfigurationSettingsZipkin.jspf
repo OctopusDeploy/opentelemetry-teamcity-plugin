@@ -1,0 +1,7 @@
+<tr <c:if test='${otelService != "zipkin.io"}'>style="display: none"</c:if>>
+    <th><label for="endpoint">Endpoint:&nbsp;<span class="mandatoryAsterix" title="Mandatory field">*</span></label></th>
+    <td>
+        <input type="text" name="endpoint" id="endpoint" value="${otelEndpoint}" class="textField longField">
+        <span class="error" id="error_endpoint"></span>
+    </td>
+</tr>

@@ -34,7 +34,7 @@ class TeamCityBuildListenerTest {
     @BeforeEach
     void setUp(@Mock EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher) {
         GlobalOpenTelemetry.resetForTest();
-        this.otelHelper = new OTELHelperImpl(mock(SpanProcessor.class, RETURNS_DEEP_STUBS),  mock(MetricExporter.class, RETURNS_DEEP_STUBS), "helper");
+        this.otelHelper = new OTELHelperImpl(mock(SpanProcessor.class, RETURNS_DEEP_STUBS),  null, "helper");
         this.factory = mock(OTELHelperFactory.class, RETURNS_DEEP_STUBS);
 
         var buildStorageManager = mock(BuildStorageManager.class, RETURNS_DEEP_STUBS);

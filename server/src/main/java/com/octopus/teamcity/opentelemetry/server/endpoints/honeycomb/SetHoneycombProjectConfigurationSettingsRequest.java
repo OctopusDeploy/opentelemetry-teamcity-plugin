@@ -17,11 +17,13 @@ public class SetHoneycombProjectConfigurationSettingsRequest extends SetProjectC
     public final String honeycombTeam;
     public final String honeycombDataset;
     public final String honeycombApiKey;
+    public final String honeycombMetricsEnabled;
 
     public SetHoneycombProjectConfigurationSettingsRequest(HttpServletRequest request) {
         super(request);
         this.honeycombTeam = request.getParameter("honeycombTeam");
         this.honeycombDataset = request.getParameter("honeycombDataset");
+        this.honeycombMetricsEnabled = request.getParameter("honeycombMetricsEnabled");
         this.honeycombApiKey = RSACipher.decryptWebRequestData(request.getParameter("encryptedHoneycombApiKey"));
     }
 
@@ -39,6 +41,7 @@ public class SetHoneycombProjectConfigurationSettingsRequest extends SetProjectC
     protected void mapServiceSpecificParams(HashMap<String, String> params, ArrayList<HeaderDto> headers) {
         params.put(PROPERTY_KEY_HONEYCOMB_DATASET, honeycombDataset);
         params.put(PROPERTY_KEY_HONEYCOMB_TEAM, honeycombTeam);
+        params.put(PROPERTY_KEY_HONEYCOMB_METRICS_ENABLED, honeycombMetricsEnabled);
         params.put(PROPERTY_KEY_HONEYCOMB_APIKEY, EncryptUtil.scramble(honeycombApiKey));
     }
 }

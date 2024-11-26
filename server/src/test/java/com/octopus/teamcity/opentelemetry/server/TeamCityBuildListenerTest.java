@@ -5,6 +5,7 @@ import com.octopus.teamcity.opentelemetry.server.helpers.OTELHelperFactory;
 import com.octopus.teamcity.opentelemetry.server.helpers.OTELHelperImpl;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.sdk.metrics.export.MetricExporter;
 import io.opentelemetry.sdk.trace.SpanProcessor;
 import jetbrains.buildServer.serverSide.BuildPromotion;
 import jetbrains.buildServer.serverSide.BuildServerListener;
@@ -33,7 +34,7 @@ class TeamCityBuildListenerTest {
     @BeforeEach
     void setUp(@Mock EventDispatcher<BuildServerListener> buildServerListenerEventDispatcher) {
         GlobalOpenTelemetry.resetForTest();
-        this.otelHelper = new OTELHelperImpl(mock(SpanProcessor.class, RETURNS_DEEP_STUBS), "helper");
+        this.otelHelper = new OTELHelperImpl(mock(SpanProcessor.class, RETURNS_DEEP_STUBS),  mock(MetricExporter.class, RETURNS_DEEP_STUBS), "helper");
         this.factory = mock(OTELHelperFactory.class, RETURNS_DEEP_STUBS);
 
         var buildStorageManager = mock(BuildStorageManager.class, RETURNS_DEEP_STUBS);

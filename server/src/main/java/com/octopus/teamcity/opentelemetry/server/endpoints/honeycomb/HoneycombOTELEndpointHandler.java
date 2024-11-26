@@ -2,8 +2,10 @@ package com.octopus.teamcity.opentelemetry.server.endpoints.honeycomb;
 
 import com.octopus.teamcity.opentelemetry.server.*;
 import com.octopus.teamcity.opentelemetry.server.endpoints.IOTELEndpointHandler;
+import io.opentelemetry.exporter.otlp.metrics.OtlpGrpcMetricExporter;
 import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter;
 import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporterBuilder;
+import io.opentelemetry.sdk.metrics.export.MetricExporter;
 import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
@@ -15,6 +17,7 @@ import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.web.servlet.ModelAndView;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.Date;
@@ -62,6 +65,19 @@ public class HoneycombOTELEndpointHandler implements IOTELEndpointHandler {
         return buildGrpcSpanProcessor(headers, endpoint);
     }
 
+    @Override
+    @Nullable
+    public MetricExporter buildMetricsExporter(String endpoint, Map<String, String> params) {
+        if (params.getOrDefault(PROPERTY_KEY_HONEYCOMB_METRICS_ENABLED, "false").equals("true")) {
+            return OtlpGrpcMetricExporter.builder()
+                    .setEndpoint(endpoint)
+                    .addHeader("x-honeycomb-team", EncryptUtil.unscramble(params.get(PROPERTY_KEY_HONEYCOMB_APIKEY)))
+                    .addHeader("x-honeycomb-dataset", params.get(PROPERTY_KEY_HONEYCOMB_DATASET))
+                    .build();
+        }
+        return null;
+    }
+
     private SpanProcessor buildGrpcSpanProcessor(Map<String, String> headers, String exporterEndpoint) {
 
         OtlpGrpcSpanExporterBuilder spanExporterBuilder = OtlpGrpcSpanExporter.builder();
@@ -85,6 +101,7 @@ public class HoneycombOTELEndpointHandler implements IOTELEndpointHandler {
         model.put("otelEndpoint", params.get(PROPERTY_KEY_ENDPOINT));
         model.put("otelHoneycombTeam", params.get(PROPERTY_KEY_HONEYCOMB_TEAM));
         model.put("otelHoneycombDataset", params.get(PROPERTY_KEY_HONEYCOMB_DATASET));
+        model.put("otelHoneycombMetricsEnabled", params.get(PROPERTY_KEY_HONEYCOMB_METRICS_ENABLED));
         if (params.get(PROPERTY_KEY_HONEYCOMB_APIKEY) == null) {
             model.put("otelHoneycombApiKey", null);
         }

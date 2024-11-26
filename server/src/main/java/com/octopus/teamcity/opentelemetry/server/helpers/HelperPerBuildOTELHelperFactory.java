@@ -43,13 +43,13 @@ public class HelperPerBuildOTELHelperFactory implements OTELHelperFactory {
                 var params = feature.getParameters();
                 if (params.get(PROPERTY_KEY_ENABLED).equals("true")) {
                     var endpoint = params.get(PROPERTY_KEY_ENDPOINT);
-                    SpanProcessor spanProcessor;
 
                     var otelHandler = otelEndpointFactory.getOTELEndpointHandler(params.get(PROPERTY_KEY_SERVICE));
-                    spanProcessor = otelHandler.buildSpanProcessor(endpoint, params);
+                    var spanProcessor = otelHandler.buildSpanProcessor(endpoint, params);
+                    var metricsExporter = otelHandler.buildMetricsExporter(endpoint, params);
 
                     long startTime = System.nanoTime();
-                    var otelHelper = new OTELHelperImpl(spanProcessor, String.valueOf(buildId));
+                    var otelHelper = new OTELHelperImpl(spanProcessor, metricsExporter, String.valueOf(buildId));
                     long endTime = System.nanoTime();
 
                     long duration = (endTime - startTime);

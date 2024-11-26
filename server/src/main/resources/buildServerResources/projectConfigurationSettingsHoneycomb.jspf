@@ -19,3 +19,9 @@
         <span class="error" id="error_honeycombDataset"></span>
     </td>
 </tr>
+<tr <c:if test='${otelService != "honeycomb.io"}'>style="display: none"</c:if>>
+    <th><label for="honeycombMetricsEnabled">Send Metrics?</label></th>
+    <td>
+        <forms:checkbox name="honeycombMetricsEnabled" checked="${otelHoneycombMetricsEnabled}" >&nbsp;</forms:checkbox>
+    </td>
+</tr>

@@ -1,10 +1,7 @@
 package com.octopus.teamcity.opentelemetry.server.helpers;
 
-import com.octopus.teamcity.opentelemetry.common.PluginConstants;
 import com.octopus.teamcity.opentelemetry.server.endpoints.OTELEndpointFactory;
-import io.opentelemetry.api.common.Attributes;
-import io.opentelemetry.sdk.resources.Resource;
-import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
+import io.opentelemetry.sdk.trace.SpanProcessor;
 import jetbrains.buildServer.serverSide.BuildPromotion;
 import jetbrains.buildServer.serverSide.ProjectManager;
 import org.apache.log4j.Logger;
@@ -46,9 +43,9 @@ public class HelperPerBuildOTELHelperFactory implements OTELHelperFactory {
                 var params = feature.getParameters();
                 if (params.get(PROPERTY_KEY_ENABLED).equals("true")) {
                     var endpoint = params.get(PROPERTY_KEY_ENDPOINT);
-
+                    SpanProcessor spanProcessor;
                     var otelHandler = otelEndpointFactory.getOTELEndpointHandler(params.get(PROPERTY_KEY_SERVICE));
-                    var spanProcessor = otelHandler.buildSpanProcessor(endpoint, params);
+                    spanProcessor = otelHandler.buildSpanProcessor(endpoint, params);
 
                     long startTime = System.nanoTime();
                     var otelHelper = new OTELHelperImpl(spanProcessor, String.valueOf(buildId));

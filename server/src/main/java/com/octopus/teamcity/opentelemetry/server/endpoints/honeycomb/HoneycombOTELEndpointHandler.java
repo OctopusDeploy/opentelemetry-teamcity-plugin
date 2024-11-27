@@ -22,6 +22,7 @@ import org.springframework.web.servlet.ModelAndView;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
+import java.time.Duration;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -94,6 +95,9 @@ public class HoneycombOTELEndpointHandler implements IOTELEndpointHandler {
                 .build();
 
         return BatchSpanProcessor.builder(spanExporter)
+                .setMaxQueueSize(32768) // Default is 2048. Increasing it to limit dropped spans.
+                .setScheduleDelay(Duration.ofSeconds(5)) // Default is 5s. This is another lever we can tweak.
+                .setMaxExportBatchSize(8192) // Default is 512. Increasing it to limit dropped spans.
                 .setMeterProvider(meterProvider)
                 .build();
     }

@@ -2,13 +2,13 @@ package com.octopus.teamcity.opentelemetry.server.endpoints.honeycomb;
 
 import com.octopus.teamcity.opentelemetry.server.*;
 import com.octopus.teamcity.opentelemetry.server.endpoints.IOTELEndpointHandler;
+import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.api.metrics.MeterProvider;
 import io.opentelemetry.exporter.otlp.metrics.OtlpGrpcMetricExporter;
 import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter;
-import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporterBuilder;
 import io.opentelemetry.sdk.metrics.export.MetricExporter;
 import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
-import io.opentelemetry.sdk.trace.export.SpanExporter;
 import jetbrains.buildServer.serverSide.SBuild;
 import jetbrains.buildServer.serverSide.crypt.EncryptUtil;
 import jetbrains.buildServer.serverSide.crypt.RSACipher;
@@ -19,7 +19,6 @@ import org.springframework.web.servlet.ModelAndView;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -79,16 +78,15 @@ public class HoneycombOTELEndpointHandler implements IOTELEndpointHandler {
     }
 
     private SpanProcessor buildGrpcSpanProcessor(Map<String, String> headers, String exporterEndpoint) {
-
-        OtlpGrpcSpanExporterBuilder spanExporterBuilder = OtlpGrpcSpanExporter.builder();
+        var spanExporterBuilder = OtlpGrpcSpanExporter.builder();
         headers.forEach(spanExporterBuilder::addHeader);
-        spanExporterBuilder.setEndpoint(exporterEndpoint);
-        SpanExporter spanExporter = spanExporterBuilder.build();
+        var spanExporter = spanExporterBuilder
+                .setEndpoint(exporterEndpoint)
+                .build();
 
-        LOG.debug("OTEL_PLUGIN: Opentelemetry export headers: " + LogMasker.mask(headers.toString()));
-        LOG.debug("OTEL_PLUGIN: Opentelemetry export endpoint: " + exporterEndpoint);
-
-        return BatchSpanProcessor.builder(spanExporter).build();
+        return BatchSpanProcessor.builder(spanExporter)
+                .setMeterProvider(GlobalOpenTelemetry.getMeterProvider())
+                .build();
     }
 
     @Override

@@ -63,16 +63,18 @@ public class OTELHelperImpl implements OTELHelper {
         metricsConfigured.set(true);
 
         var loggingMetricExporter = LoggingMetricExporter.create();
+        var consoleLogMetricReader = PeriodicMetricReader.builder(loggingMetricExporter)
+                .setInterval(Duration.ofSeconds(10))
+                .build();
         var meterProviderBuilder = SdkMeterProvider.builder()
                 .setResource(Resource.getDefault().merge(serviceNameResource))
-                .registerMetricReader(PeriodicMetricReader.builder(loggingMetricExporter)
-                        .setInterval(Duration.ofSeconds(10))
-                        .build());
+                .registerMetricReader(consoleLogMetricReader);
         if (metricExporter != null) {
+            var providedMetricExporterBuilder = PeriodicMetricReader.builder(metricExporter)
+                    .setInterval(Duration.ofSeconds(10))
+                    .build();
             meterProviderBuilder
-                    .registerMetricReader(PeriodicMetricReader.builder(metricExporter)
-                            .setInterval(Duration.ofSeconds(10))
-                            .build());
+                    .registerMetricReader(providedMetricExporterBuilder);
         }
         var sdkMeterProvider = meterProviderBuilder.build();
         var globalOpenTelemetry = OpenTelemetrySdk.builder()

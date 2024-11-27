@@ -10,11 +10,7 @@ import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.propagation.ContextPropagators;
-import io.opentelemetry.exporter.logging.LoggingMetricExporter;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
-import io.opentelemetry.sdk.metrics.SdkMeterProvider;
-import io.opentelemetry.sdk.metrics.export.MetricExporter;
-import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.SpanProcessor;
@@ -23,10 +19,8 @@ import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
-import java.time.Duration;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class OTELHelperImpl implements OTELHelper {
     static Logger LOG = Logger.getLogger(OTELHelperImpl.class.getName());
@@ -35,16 +29,12 @@ public class OTELHelperImpl implements OTELHelper {
     private final ConcurrentHashMap<String, Span> spanMap;
     private final SdkTracerProvider sdkTracerProvider;
     private final String helperName;
-    private static final AtomicBoolean metricsConfigured = new AtomicBoolean(false);
 
     public OTELHelperImpl(
             @NotNull SpanProcessor spanProcessor,
-            @Nullable MetricExporter metricExporter,
             @NotNull String helperName) {
         this.helperName = helperName;
         var serviceNameResource = Resource.create(Attributes.of(ResourceAttributes.SERVICE_NAME, PluginConstants.SERVICE_NAME));
-
-        configureMetricsExport(metricExporter, serviceNameResource);
 
         this.sdkTracerProvider = SdkTracerProvider.builder()
                 .setResource(Resource.getDefault().merge(serviceNameResource))
@@ -56,35 +46,6 @@ public class OTELHelperImpl implements OTELHelper {
                 .build();
         this.tracer = this.openTelemetry.getTracer(PluginConstants.TRACER_INSTRUMENTATION_NAME);
         this.spanMap = new ConcurrentHashMap<>();
-    }
-
-    public static void configureMetricsExport(@Nullable MetricExporter metricExporter, Resource serviceNameResource) {
-        if (metricsConfigured.get()) return;
-        metricsConfigured.set(true);
-
-        var loggingMetricExporter = LoggingMetricExporter.create();
-        var consoleLogMetricReader = PeriodicMetricReader.builder(loggingMetricExporter)
-                .setInterval(Duration.ofSeconds(10))
-                .build();
-        var meterProviderBuilder = SdkMeterProvider.builder()
-                .setResource(Resource.getDefault().merge(serviceNameResource))
-                .registerMetricReader(consoleLogMetricReader);
-        if (metricExporter != null) {
-            var providedMetricExporterBuilder = PeriodicMetricReader.builder(metricExporter)
-                    .setInterval(Duration.ofSeconds(10))
-                    .build();
-            meterProviderBuilder
-                    .registerMetricReader(providedMetricExporterBuilder);
-        }
-        var sdkMeterProvider = meterProviderBuilder.build();
-        var globalOpenTelemetry = OpenTelemetrySdk.builder()
-                .setMeterProvider(sdkMeterProvider)
-                .build();
-
-        GlobalOpenTelemetry.set(globalOpenTelemetry);
-
-        // Shutdown hooks to close resources properly
-        Runtime.getRuntime().addShutdownHook(new Thread(sdkMeterProvider::close));
     }
 
     @Override

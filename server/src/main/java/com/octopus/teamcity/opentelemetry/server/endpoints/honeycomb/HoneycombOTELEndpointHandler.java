@@ -2,7 +2,6 @@ package com.octopus.teamcity.opentelemetry.server.endpoints.honeycomb;
 
 import com.octopus.teamcity.opentelemetry.server.*;
 import com.octopus.teamcity.opentelemetry.server.endpoints.IOTELEndpointHandler;
-import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.metrics.MeterProvider;
 import io.opentelemetry.exporter.otlp.metrics.OtlpGrpcMetricExporter;
 import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter;
@@ -56,12 +55,12 @@ public class HoneycombOTELEndpointHandler implements IOTELEndpointHandler {
     }
 
     @Override
-    public SpanProcessor buildSpanProcessor(String endpoint, Map<String, String> params) {
+    public SpanProcessor buildSpanProcessor(String endpoint, Map<String, String> params, MeterProvider meterProvider) {
         Map<String, String> headers = new HashMap<>();
         //todo: add a setting to say "use classic" or "use environments"
         headers.put("x-honeycomb-dataset", params.get(PROPERTY_KEY_HONEYCOMB_DATASET));
         headers.put("x-honeycomb-team", EncryptUtil.unscramble(params.get(PROPERTY_KEY_HONEYCOMB_APIKEY)));
-        return buildGrpcSpanProcessor(headers, endpoint);
+        return buildGrpcSpanProcessor(headers, endpoint, meterProvider);
     }
 
     @Override
@@ -77,15 +76,16 @@ public class HoneycombOTELEndpointHandler implements IOTELEndpointHandler {
         return null;
     }
 
-    private SpanProcessor buildGrpcSpanProcessor(Map<String, String> headers, String exporterEndpoint) {
+    private SpanProcessor buildGrpcSpanProcessor(Map<String, String> headers, String exporterEndpoint, MeterProvider meterProvider) {
         var spanExporterBuilder = OtlpGrpcSpanExporter.builder();
         headers.forEach(spanExporterBuilder::addHeader);
         var spanExporter = spanExporterBuilder
                 .setEndpoint(exporterEndpoint)
+                .setMeterProvider(meterProvider)
                 .build();
 
         return BatchSpanProcessor.builder(spanExporter)
-                .setMeterProvider(GlobalOpenTelemetry.getMeterProvider())
+                .setMeterProvider(meterProvider)
                 .build();
     }
 

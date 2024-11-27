@@ -33,7 +33,7 @@ class OTELHelperTest {
     @BeforeEach
     void setUp() {
         GlobalOpenTelemetry.resetForTest();
-        this.otelHelper = new OTELHelperImpl(mock(SpanProcessor.class, RETURNS_DEEP_STUBS),  null, "helperNamr");
+        this.otelHelper = new OTELHelperImpl(mock(SpanProcessor.class, RETURNS_DEEP_STUBS),  "helperNamr");
     }
 
 

@@ -1,6 +1,7 @@
 package com.octopus.teamcity.opentelemetry.server.endpoints;
 
 import com.octopus.teamcity.opentelemetry.server.SetProjectConfigurationSettingsRequest;
+import io.opentelemetry.api.metrics.MeterProvider;
 import io.opentelemetry.sdk.metrics.export.MetricExporter;
 import io.opentelemetry.sdk.trace.SpanProcessor;
 import jetbrains.buildServer.serverSide.SBuild;
@@ -13,7 +14,7 @@ import java.util.Map;
 public interface IOTELEndpointHandler {
     ModelAndView getBuildOverviewModelAndView(SBuild build, Map<String, String> params, String traceId);
 
-    SpanProcessor buildSpanProcessor(String endpoint, Map<String, String> params);
+    SpanProcessor buildSpanProcessor(String endpoint, Map<String, String> params, MeterProvider meterProvider);
     @Nullable
     MetricExporter buildMetricsExporter(String endpoint, Map<String, String> params);
 

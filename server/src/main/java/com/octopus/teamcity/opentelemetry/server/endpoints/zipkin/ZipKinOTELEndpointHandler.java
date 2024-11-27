@@ -2,6 +2,7 @@ package com.octopus.teamcity.opentelemetry.server.endpoints.zipkin;
 
 import com.octopus.teamcity.opentelemetry.server.SetProjectConfigurationSettingsRequest;
 import com.octopus.teamcity.opentelemetry.server.endpoints.IOTELEndpointHandler;
+import io.opentelemetry.api.metrics.MeterProvider;
 import io.opentelemetry.exporter.zipkin.ZipkinSpanExporter;
 import io.opentelemetry.sdk.metrics.export.MetricExporter;
 import io.opentelemetry.sdk.trace.SpanProcessor;
@@ -36,7 +37,7 @@ public class ZipKinOTELEndpointHandler implements IOTELEndpointHandler {
     }
 
     @Override
-    public SpanProcessor buildSpanProcessor(String endpoint, Map<String, String> params) {
+    public SpanProcessor buildSpanProcessor(String endpoint, Map<String, String> params, MeterProvider meterProvider) {
         return buildZipkinSpanProcessor(endpoint);
     }
 

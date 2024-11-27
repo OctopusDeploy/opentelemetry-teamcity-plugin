@@ -2,6 +2,7 @@ package com.octopus.teamcity.opentelemetry.server.endpoints.custom;
 
 import com.octopus.teamcity.opentelemetry.server.*;
 import com.octopus.teamcity.opentelemetry.server.endpoints.IOTELEndpointHandler;
+import io.opentelemetry.api.metrics.MeterProvider;
 import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter;
 import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporterBuilder;
 import io.opentelemetry.sdk.metrics.export.MetricExporter;
@@ -36,7 +37,7 @@ public class CustomOTELEndpointHandler implements IOTELEndpointHandler {
     }
 
     @Override
-    public SpanProcessor buildSpanProcessor(String endpoint, Map<String, String> params) {
+    public SpanProcessor buildSpanProcessor(String endpoint, Map<String, String> params, MeterProvider meterProvider) {
         Map<String, String> headers = new HashMap<>();
         params.forEach((k, v) -> {
             if (k.startsWith(PROPERTY_KEY_HEADERS)) {

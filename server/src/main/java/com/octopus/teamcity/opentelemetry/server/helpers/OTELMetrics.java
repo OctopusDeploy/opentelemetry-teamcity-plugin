@@ -17,6 +17,11 @@ public class OTELMetrics {
     private static final AtomicBoolean metricsConfigured = new AtomicBoolean(false);
     private static SdkMeterProvider sdkMeterProvider;
 
+    // this is not quite right...
+    // it's using project level settings (which can be different across projects)
+    // but setting up a global configuration.
+    // likely need to refactor the config so that it has metrics configuration as global
+
     public static SdkMeterProvider getOTELMeterProvider(@Nullable MetricExporter metricExporter, Resource serviceNameResource) {
         if (metricsConfigured.get()) return sdkMeterProvider;
         metricsConfigured.set(true);

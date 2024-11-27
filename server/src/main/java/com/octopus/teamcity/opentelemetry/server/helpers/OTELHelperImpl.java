@@ -26,6 +26,7 @@ import javax.annotation.Nullable;
 import java.time.Duration;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class OTELHelperImpl implements OTELHelper {
     static Logger LOG = Logger.getLogger(OTELHelperImpl.class.getName());
@@ -34,14 +35,14 @@ public class OTELHelperImpl implements OTELHelper {
     private final ConcurrentHashMap<String, Span> spanMap;
     private final SdkTracerProvider sdkTracerProvider;
     private final String helperName;
+    private static final AtomicBoolean metricsConfigured = new AtomicBoolean(false);
 
     public OTELHelperImpl(
             @NotNull SpanProcessor spanProcessor,
             @Nullable MetricExporter metricExporter,
             @NotNull String helperName) {
         this.helperName = helperName;
-        Resource serviceNameResource = Resource
-                .create(Attributes.of(ResourceAttributes.SERVICE_NAME, PluginConstants.SERVICE_NAME));
+        var serviceNameResource = Resource.create(Attributes.of(ResourceAttributes.SERVICE_NAME, PluginConstants.SERVICE_NAME));
 
         configureMetricsExport(metricExporter, serviceNameResource);
 
@@ -57,7 +58,10 @@ public class OTELHelperImpl implements OTELHelper {
         this.spanMap = new ConcurrentHashMap<>();
     }
 
-    private static void configureMetricsExport(@Nullable MetricExporter metricExporter, Resource serviceNameResource) {
+    public static void configureMetricsExport(@Nullable MetricExporter metricExporter, Resource serviceNameResource) {
+        if (metricsConfigured.get()) return;
+        metricsConfigured.set(true);
+
         var loggingMetricExporter = LoggingMetricExporter.create();
         var meterProviderBuilder = SdkMeterProvider.builder()
                 .setResource(Resource.getDefault().merge(serviceNameResource))

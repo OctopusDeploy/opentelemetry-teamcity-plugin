@@ -31,7 +31,6 @@ public class OTELHelperImpl implements OTELHelper {
         this.helperName = helperName;
         Resource serviceNameResource = Resource
                 .create(Attributes.of(ResourceAttributes.SERVICE_NAME, PluginConstants.SERVICE_NAME));
-
         this.sdkTracerProvider = SdkTracerProvider.builder()
                 .setResource(Resource.getDefault().merge(serviceNameResource))
                 .addSpanProcessor(spanProcessor)

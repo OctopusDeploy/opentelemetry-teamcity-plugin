@@ -48,10 +48,7 @@ public class HelperPerBuildOTELHelperFactory implements OTELHelperFactory {
                     var endpoint = params.get(PROPERTY_KEY_ENDPOINT);
 
                     var otelHandler = otelEndpointFactory.getOTELEndpointHandler(params.get(PROPERTY_KEY_SERVICE));
-                    var metricsExporter = otelHandler.buildMetricsExporter(endpoint, params);
-                    var serviceNameResource = Resource.create(Attributes.of(ResourceAttributes.SERVICE_NAME, PluginConstants.SERVICE_NAME));
-                    var meterProvider = OTELMetrics.getOTELMeterProvider(metricsExporter, serviceNameResource);
-                    var spanProcessor = otelHandler.buildSpanProcessor(endpoint, params, meterProvider);
+                    var spanProcessor = otelHandler.buildSpanProcessor(endpoint, params);
 
                     long startTime = System.nanoTime();
                     var otelHelper = new OTELHelperImpl(spanProcessor, String.valueOf(buildId));

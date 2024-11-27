@@ -1,13 +1,17 @@
 package com.octopus.teamcity.opentelemetry.server.endpoints.honeycomb;
 
+import com.octopus.teamcity.opentelemetry.common.PluginConstants;
 import com.octopus.teamcity.opentelemetry.server.*;
 import com.octopus.teamcity.opentelemetry.server.endpoints.IOTELEndpointHandler;
-import io.opentelemetry.api.metrics.MeterProvider;
+import com.octopus.teamcity.opentelemetry.server.helpers.OTELMetrics;
+import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.exporter.otlp.metrics.OtlpGrpcMetricExporter;
 import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter;
 import io.opentelemetry.sdk.metrics.export.MetricExporter;
+import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
+import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
 import jetbrains.buildServer.serverSide.SBuild;
 import jetbrains.buildServer.serverSide.crypt.EncryptUtil;
 import jetbrains.buildServer.serverSide.crypt.RSACipher;
@@ -29,8 +33,7 @@ public class HoneycombOTELEndpointHandler implements IOTELEndpointHandler {
     private final PluginDescriptor pluginDescriptor;
     static Logger LOG = Logger.getLogger(HoneycombOTELEndpointHandler.class.getName());
 
-    public HoneycombOTELEndpointHandler(
-            PluginDescriptor pluginDescriptor) {
+    public HoneycombOTELEndpointHandler(PluginDescriptor pluginDescriptor) {
         this.pluginDescriptor = pluginDescriptor;
     }
 
@@ -55,17 +58,19 @@ public class HoneycombOTELEndpointHandler implements IOTELEndpointHandler {
     }
 
     @Override
-    public SpanProcessor buildSpanProcessor(String endpoint, Map<String, String> params, MeterProvider meterProvider) {
+    public SpanProcessor buildSpanProcessor(String endpoint, Map<String, String> params) {
         Map<String, String> headers = new HashMap<>();
         //todo: add a setting to say "use classic" or "use environments"
         headers.put("x-honeycomb-dataset", params.get(PROPERTY_KEY_HONEYCOMB_DATASET));
         headers.put("x-honeycomb-team", EncryptUtil.unscramble(params.get(PROPERTY_KEY_HONEYCOMB_APIKEY)));
-        return buildGrpcSpanProcessor(headers, endpoint, meterProvider);
+
+        var metricsExporter = buildMetricsExporter(endpoint, params);
+
+        return buildGrpcSpanProcessor(headers, endpoint, metricsExporter);
     }
 
-    @Override
     @Nullable
-    public MetricExporter buildMetricsExporter(String endpoint, Map<String, String> params) {
+    private MetricExporter buildMetricsExporter(String endpoint, Map<String, String> params) {
         if (params.getOrDefault(PROPERTY_KEY_HONEYCOMB_METRICS_ENABLED, "false").equals("true")) {
             return OtlpGrpcMetricExporter.builder()
                     .setEndpoint(endpoint)
@@ -76,7 +81,11 @@ public class HoneycombOTELEndpointHandler implements IOTELEndpointHandler {
         return null;
     }
 
-    private SpanProcessor buildGrpcSpanProcessor(Map<String, String> headers, String exporterEndpoint, MeterProvider meterProvider) {
+    private SpanProcessor buildGrpcSpanProcessor(Map<String, String> headers, String exporterEndpoint, MetricExporter metricsExporter) {
+
+        var serviceNameResource = Resource.create(Attributes.of(ResourceAttributes.SERVICE_NAME, PluginConstants.SERVICE_NAME));
+        var meterProvider = OTELMetrics.getOTELMeterProvider(metricsExporter, serviceNameResource);
+
         var spanExporterBuilder = OtlpGrpcSpanExporter.builder();
         headers.forEach(spanExporterBuilder::addHeader);
         var spanExporter = spanExporterBuilder

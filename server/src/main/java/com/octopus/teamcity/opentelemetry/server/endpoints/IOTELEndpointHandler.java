@@ -14,9 +14,7 @@ import java.util.Map;
 public interface IOTELEndpointHandler {
     ModelAndView getBuildOverviewModelAndView(SBuild build, Map<String, String> params, String traceId);
 
-    SpanProcessor buildSpanProcessor(String endpoint, Map<String, String> params, MeterProvider meterProvider);
-    @Nullable
-    MetricExporter buildMetricsExporter(String endpoint, Map<String, String> params);
+    SpanProcessor buildSpanProcessor(String endpoint, Map<String, String> params);
 
     SetProjectConfigurationSettingsRequest getSetProjectConfigurationSettingsRequest(HttpServletRequest request);
 

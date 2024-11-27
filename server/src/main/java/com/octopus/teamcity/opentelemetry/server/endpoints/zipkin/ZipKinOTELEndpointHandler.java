@@ -37,14 +37,8 @@ public class ZipKinOTELEndpointHandler implements IOTELEndpointHandler {
     }
 
     @Override
-    public SpanProcessor buildSpanProcessor(String endpoint, Map<String, String> params, MeterProvider meterProvider) {
+    public SpanProcessor buildSpanProcessor(String endpoint, Map<String, String> params) {
         return buildZipkinSpanProcessor(endpoint);
-    }
-
-    @Nullable
-    @Override
-    public MetricExporter buildMetricsExporter(String endpoint, Map<String, String> params) {
-        return null;
     }
 
     private SpanProcessor buildZipkinSpanProcessor(String exporterEndpoint) {

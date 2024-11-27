@@ -37,7 +37,7 @@ public class CustomOTELEndpointHandler implements IOTELEndpointHandler {
     }
 
     @Override
-    public SpanProcessor buildSpanProcessor(String endpoint, Map<String, String> params, MeterProvider meterProvider) {
+    public SpanProcessor buildSpanProcessor(String endpoint, Map<String, String> params) {
         Map<String, String> headers = new HashMap<>();
         params.forEach((k, v) -> {
             if (k.startsWith(PROPERTY_KEY_HEADERS)) {
@@ -48,12 +48,6 @@ public class CustomOTELEndpointHandler implements IOTELEndpointHandler {
             }
         });
         return buildGrpcSpanProcessor(headers, endpoint);
-    }
-
-    @Nullable
-    @Override
-    public MetricExporter buildMetricsExporter(String endpoint, Map<String, String> params) {
-        return null;
     }
 
     @Override

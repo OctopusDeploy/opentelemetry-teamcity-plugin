@@ -1,10 +1,8 @@
 package com.octopus.teamcity.opentelemetry.server.helpers;
 
 import com.octopus.teamcity.opentelemetry.common.PluginConstants;
-import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
-import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
@@ -16,7 +14,6 @@ import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
 import org.apache.log4j.Logger;
-import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,11 +27,10 @@ public class OTELHelperImpl implements OTELHelper {
     private final SdkTracerProvider sdkTracerProvider;
     private final String helperName;
 
-    public OTELHelperImpl(
-            @NotNull SpanProcessor spanProcessor,
-            @NotNull String helperName) {
+    public OTELHelperImpl(SpanProcessor spanProcessor, String helperName) {
         this.helperName = helperName;
-        var serviceNameResource = Resource.create(Attributes.of(ResourceAttributes.SERVICE_NAME, PluginConstants.SERVICE_NAME));
+        Resource serviceNameResource = Resource
+                .create(Attributes.of(ResourceAttributes.SERVICE_NAME, PluginConstants.SERVICE_NAME));
 
         this.sdkTracerProvider = SdkTracerProvider.builder()
                 .setResource(Resource.getDefault().merge(serviceNameResource))
@@ -61,7 +57,6 @@ public class OTELHelperImpl implements OTELHelper {
     @Override
     public Span createSpan(String spanName, Span parentSpan, String parentSpanName) {
         LOG.info("Creating child span " + spanName + " under parent " + parentSpanName);
-        IncrementCounter("spans-created", "Number of spans created");
         return this.spanMap.computeIfAbsent(spanName, key -> this.tracer
                 .spanBuilder(spanName)
                 .setParent(Context.current().with(parentSpan))
@@ -70,7 +65,6 @@ public class OTELHelperImpl implements OTELHelper {
 
     @Override
     public Span createTransientSpan(String spanName, Span parentSpan, long startTime) {
-        IncrementCounter("spans-created", "Number of spans created");
         return this.tracer.spanBuilder(spanName)
                 .setParent(Context.current().with(parentSpan))
                 .setStartTimestamp(startTime, TimeUnit.MILLISECONDS)
@@ -100,16 +94,5 @@ public class OTELHelperImpl implements OTELHelper {
         this.sdkTracerProvider.forceFlush();
         this.sdkTracerProvider.close();
         this.spanMap.clear();
-    }
-
-    public void IncrementCounter(String counterName, String counterDescription)
-    {
-        //likely temporary while I confirm that metrics is working as expected
-        Meter meter = openTelemetry.getMeter("teamcity-opentelemetry-plugin");
-        meter.counterBuilder(counterName)
-                .setDescription(counterDescription)
-                .setUnit("1")
-                .build()
-                .add(1);
     }
 }

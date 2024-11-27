@@ -44,6 +44,7 @@ public class HelperPerBuildOTELHelperFactory implements OTELHelperFactory {
                 if (params.get(PROPERTY_KEY_ENABLED).equals("true")) {
                     var endpoint = params.get(PROPERTY_KEY_ENDPOINT);
                     SpanProcessor spanProcessor;
+
                     var otelHandler = otelEndpointFactory.getOTELEndpointHandler(params.get(PROPERTY_KEY_SERVICE));
                     spanProcessor = otelHandler.buildSpanProcessor(endpoint, params);
 

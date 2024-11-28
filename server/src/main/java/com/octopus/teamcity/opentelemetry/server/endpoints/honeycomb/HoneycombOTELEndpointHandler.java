@@ -82,7 +82,7 @@ public class HoneycombOTELEndpointHandler implements IOTELEndpointHandler {
         return null;
     }
 
-    private SpanProcessor buildGrpcSpanProcessor(Map<String, String> headers, String exporterEndpoint, MetricExporter metricsExporter) {
+    private SpanProcessor buildGrpcSpanProcessor(Map<String, String> headers, String exporterEndpoint, @Nullable MetricExporter metricsExporter) {
 
         var serviceNameResource = Resource.create(Attributes.of(ResourceAttributes.SERVICE_NAME, PluginConstants.SERVICE_NAME));
         var meterProvider = OTELMetrics.getOTELMeterProvider(metricsExporter, serviceNameResource);

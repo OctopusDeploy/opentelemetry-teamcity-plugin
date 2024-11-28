@@ -1,7 +1,6 @@
 package com.octopus.teamcity.opentelemetry.server.helpers;
 
 import io.opentelemetry.api.GlobalOpenTelemetry;
-import io.opentelemetry.exporter.logging.LoggingMetricExporter;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
 import io.opentelemetry.sdk.metrics.export.MetricExporter;
@@ -26,13 +25,8 @@ public class OTELMetrics {
         if (metricsConfigured.get()) return sdkMeterProvider;
         metricsConfigured.set(true);
 
-        var loggingMetricExporter = LoggingMetricExporter.create();
-        var consoleLogMetricReader = PeriodicMetricReader.builder(loggingMetricExporter)
-                .setInterval(Duration.ofSeconds(10))
-                .build();
         var meterProviderBuilder = SdkMeterProvider.builder()
-                .setResource(Resource.getDefault().merge(serviceNameResource))
-                .registerMetricReader(consoleLogMetricReader);
+                .setResource(Resource.getDefault().merge(serviceNameResource));
         if (metricExporter != null) {
             var providedMetricExporterBuilder = PeriodicMetricReader.builder(metricExporter)
                     .setInterval(Duration.ofSeconds(10))

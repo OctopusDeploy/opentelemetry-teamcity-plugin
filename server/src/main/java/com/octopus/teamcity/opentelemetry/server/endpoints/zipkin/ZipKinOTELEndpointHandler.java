@@ -13,7 +13,7 @@ import org.springframework.web.servlet.ModelAndView;
 import javax.servlet.http.HttpServletRequest;
 import java.util.Map;
 
-import static com.octopus.teamcity.opentelemetry.common.PluginConstants.PROPERTY_KEY_ENDPOINT;
+import static com.octopus.teamcity.opentelemetry.common.PluginConstants.*;
 
 public class ZipKinOTELEndpointHandler implements IOTELEndpointHandler {
     private final PluginDescriptor pluginDescriptor;
@@ -44,7 +44,11 @@ public class ZipKinOTELEndpointHandler implements IOTELEndpointHandler {
                 .setEndpoint(endpoint)
                 .build();
 
-        return BatchSpanProcessor.builder(zipkinExporter).build();
+        return BatchSpanProcessor.builder(zipkinExporter)
+                .setMaxQueueSize(BATCH_SPAN_PROCESSOR_MAX_QUEUE_SIZE)
+                .setScheduleDelay(BATCH_SPAN_PROCESSOR_MAX_SCHEDULE_DELAY)
+                .setMaxExportBatchSize(BATCH_SPAN_PROCESSOR_MAX_EXPORT_BATCH_SIZE)
+                .build();
     }
 
     @Override

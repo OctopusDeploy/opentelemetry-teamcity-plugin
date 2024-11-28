@@ -95,9 +95,9 @@ public class HoneycombOTELEndpointHandler implements IOTELEndpointHandler {
                 .build();
 
         return BatchSpanProcessor.builder(spanExporter)
-                .setMaxQueueSize(32768) // Default is 2048. Increasing it to limit dropped spans.
-                .setScheduleDelay(Duration.ofSeconds(5)) // Default is 5s. This is another lever we can tweak.
-                .setMaxExportBatchSize(8192) // Default is 512. Increasing it to limit dropped spans.
+                .setMaxQueueSize(BATCH_SPAN_PROCESSOR_MAX_QUEUE_SIZE)
+                .setScheduleDelay(BATCH_SPAN_PROCESSOR_MAX_SCHEDULE_DELAY)
+                .setMaxExportBatchSize(BATCH_SPAN_PROCESSOR_MAX_EXPORT_BATCH_SIZE)
                 .setMeterProvider(meterProvider)
                 .build();
     }

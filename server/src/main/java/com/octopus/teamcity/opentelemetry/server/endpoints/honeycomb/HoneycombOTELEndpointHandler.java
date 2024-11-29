@@ -88,8 +88,7 @@ public class HoneycombOTELEndpointHandler implements IOTELEndpointHandler {
         //todo: centralise the definition of this
         var serviceNameResource = Resource
                 .create(Attributes.of(
-                        ServiceAttributes.SERVICE_NAME, PluginConstants.SERVICE_NAME,
-                        AttributeKey.stringKey("teamcity.node.id"), nodesService.getCurrentNode().getId())
+                        ServiceAttributes.SERVICE_NAME, PluginConstants.SERVICE_NAME
                 );
 
         var meterProvider = OTELMetrics.getOTELMeterProvider(metricsExporter, serviceNameResource);

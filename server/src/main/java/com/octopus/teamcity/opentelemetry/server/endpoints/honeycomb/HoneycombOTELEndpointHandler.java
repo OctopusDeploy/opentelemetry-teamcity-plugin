@@ -4,6 +4,7 @@ import com.octopus.teamcity.opentelemetry.common.PluginConstants;
 import com.octopus.teamcity.opentelemetry.server.*;
 import com.octopus.teamcity.opentelemetry.server.endpoints.IOTELEndpointHandler;
 import com.octopus.teamcity.opentelemetry.server.helpers.OTELMetrics;
+import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.exporter.otlp.metrics.OtlpGrpcMetricExporter;
 import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter;
@@ -11,7 +12,7 @@ import io.opentelemetry.sdk.metrics.export.MetricExporter;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
-import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
+import io.opentelemetry.semconv.ServiceAttributes;
 import jetbrains.buildServer.serverSide.SBuild;
 import jetbrains.buildServer.serverSide.crypt.EncryptUtil;
 import jetbrains.buildServer.serverSide.crypt.RSACipher;
@@ -84,7 +85,12 @@ public class HoneycombOTELEndpointHandler implements IOTELEndpointHandler {
 
     private SpanProcessor buildGrpcSpanProcessor(Map<String, String> headers, String exporterEndpoint, @Nullable MetricExporter metricsExporter) {
 
-        var serviceNameResource = Resource.create(Attributes.of(ResourceAttributes.SERVICE_NAME, PluginConstants.SERVICE_NAME));
+        //todo: centralise the definition of this
+        var serviceNameResource = Resource
+                .create(Attributes.of(
+                        ServiceAttributes.SERVICE_NAME, PluginConstants.SERVICE_NAME
+                ));
+
         var meterProvider = OTELMetrics.getOTELMeterProvider(metricsExporter, serviceNameResource);
 
         var spanExporterBuilder = OtlpGrpcSpanExporter.builder();

@@ -81,7 +81,6 @@ public class HoneycombOTELEndpointHandler implements IOTELEndpointHandler {
                     .addHeader("x-honeycomb-team", EncryptUtil.unscramble(params.get(PROPERTY_KEY_HONEYCOMB_APIKEY)))
                     .addHeader("x-honeycomb-dataset", params.get(PROPERTY_KEY_HONEYCOMB_DATASET))
                     .build();
-                otlpGrpcMetricExporterBuilder.addHeader("x-honeycomb-dataset", params.get(PROPERTY_KEY_HONEYCOMB_DATASET));
             }
         }
         return null;

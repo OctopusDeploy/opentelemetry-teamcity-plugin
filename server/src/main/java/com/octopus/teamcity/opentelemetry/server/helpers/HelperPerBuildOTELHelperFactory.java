@@ -29,12 +29,12 @@ public class HelperPerBuildOTELHelperFactory implements OTELHelperFactory {
         this.otelHelpers = new ConcurrentHashMap<>();
     }
 
-    public OTELHelper getOTELHelper(BuildPromotion build) {
-        var buildId = build.getId();
+    public OTELHelper getOTELHelper(BuildPromotion buildPromotion) {
+        var buildId = buildPromotion.getId();
 
         return otelHelpers.computeIfAbsent(buildId, key -> {
             LOG.debug(String.format("Creating OTELHelper for build %d.", buildId));
-            var projectId = build.getProjectExternalId();
+            var projectId = buildPromotion.getProjectExternalId();
             var project = projectManager.findProjectByExternalId(projectId);
 
             var features = project.getAvailableFeaturesOfType(PLUGIN_NAME);
@@ -46,10 +46,10 @@ public class HelperPerBuildOTELHelperFactory implements OTELHelperFactory {
                     SpanProcessor spanProcessor;
 
                     var otelHandler = otelEndpointFactory.getOTELEndpointHandler(params.get(PROPERTY_KEY_SERVICE));
-                    spanProcessor = otelHandler.buildSpanProcessor(endpoint, params);
+                    var spanProcessorMeterProviderPair = otelHandler.buildSpanProcessorAndMeterProvider(buildPromotion, endpoint, params);
 
                     long startTime = System.nanoTime();
-                    var otelHelper = new OTELHelperImpl(spanProcessor, String.valueOf(buildId));
+                    var otelHelper = new OTELHelperImpl(spanProcessorMeterProviderPair.getLeft(), spanProcessorMeterProviderPair.getRight(), String.valueOf(buildId));
                     long endTime = System.nanoTime();
 
                     long duration = (endTime - startTime);

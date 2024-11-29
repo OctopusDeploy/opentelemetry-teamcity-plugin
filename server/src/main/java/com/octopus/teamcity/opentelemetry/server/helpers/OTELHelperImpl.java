@@ -12,7 +12,7 @@ import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.SpanProcessor;
-import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
+import io.opentelemetry.semconv.ServiceAttributes;
 import org.apache.log4j.Logger;
 
 import javax.annotation.Nullable;
@@ -30,7 +30,7 @@ public class OTELHelperImpl implements OTELHelper {
     public OTELHelperImpl(SpanProcessor spanProcessor, String helperName) {
         this.helperName = helperName;
         Resource serviceNameResource = Resource
-                .create(Attributes.of(ResourceAttributes.SERVICE_NAME, PluginConstants.SERVICE_NAME));
+                .create(Attributes.of(ServiceAttributes.SERVICE_NAME, PluginConstants.SERVICE_NAME));
         this.sdkTracerProvider = SdkTracerProvider.builder()
                 .setResource(Resource.getDefault().merge(serviceNameResource))
                 .addSpanProcessor(spanProcessor)

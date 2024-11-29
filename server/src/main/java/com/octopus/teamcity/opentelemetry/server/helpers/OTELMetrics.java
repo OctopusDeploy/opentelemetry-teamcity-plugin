@@ -18,13 +18,9 @@ public class OTELMetrics {
                 .setInterval(Duration.ofSeconds(10))
                 .build();
 
-        var sdkMeterProvider = SdkMeterProvider.builder()
+        return SdkMeterProvider.builder()
                 .setResource(Resource.getDefault().merge(serviceNameResource))
                 .registerMetricReader(providedMetricExporter)
                 .build();
-
-        // Shutdown hooks to close resources properly
-        Runtime.getRuntime().addShutdownHook(new Thread(sdkMeterProvider::close));
-        return sdkMeterProvider;
     }
 }

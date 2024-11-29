@@ -66,8 +66,6 @@ public class HoneycombOTELEndpointHandler implements IOTELEndpointHandler {
         Map<String, String> headers = new HashMap<>();
         //todo: add a setting to say "use classic" or "use environments"
         headers.put("x-honeycomb-dataset", params.get(PROPERTY_KEY_HONEYCOMB_DATASET));
-        if (!Objects.equals(params.get(PROPERTY_KEY_HONEYCOMB_MODE), HONEYCOMB_MODE_ENVIRONMENTS)) {
-            headers.put("x-honeycomb-dataset", params.get(PROPERTY_KEY_HONEYCOMB_DATASET));
         headers.put("x-honeycomb-team", EncryptUtil.unscramble(params.get(PROPERTY_KEY_HONEYCOMB_APIKEY)));
 
         var metricsExporter = buildMetricsExporter(endpoint, params);

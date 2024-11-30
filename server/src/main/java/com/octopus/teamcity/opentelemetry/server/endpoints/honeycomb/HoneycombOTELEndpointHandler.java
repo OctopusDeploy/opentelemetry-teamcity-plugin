@@ -13,8 +13,8 @@ import io.opentelemetry.sdk.metrics.export.MetricExporter;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
-import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
 import jetbrains.buildServer.serverSide.BuildPromotion;
+import io.opentelemetry.semconv.ServiceAttributes;
 import jetbrains.buildServer.serverSide.SBuild;
 import jetbrains.buildServer.serverSide.crypt.EncryptUtil;
 import jetbrains.buildServer.serverSide.crypt.RSACipher;
@@ -90,12 +90,11 @@ public class HoneycombOTELEndpointHandler implements IOTELEndpointHandler {
         //todo: centralise the definition of this
         var serviceNameResource = Resource
                 .create(Attributes.of(
-                        ResourceAttributes.SERVICE_NAME, PluginConstants.SERVICE_NAME,
+                        ServiceAttributes.SERVICE_NAME, PluginConstants.SERVICE_NAME
                         AttributeKey.stringKey("teamcity.build_promotion.id"), Long.toString(buildPromotion.getId())
                         //todo: add teamcity node name
                         //ResourceAttributes.NODE_NAME, PluginConstants.SERVICE_NAME
                 ));
-
         var meterProvider = OTELMetrics.getOTELMeterProvider(metricsExporter, serviceNameResource);
 
         var spanExporterBuilder = OtlpGrpcSpanExporter.builder();

@@ -1,6 +1,7 @@
 package com.octopus.teamcity.opentelemetry.server.helpers;
 
 import com.octopus.teamcity.opentelemetry.server.endpoints.OTELEndpointFactory;
+import io.opentelemetry.sdk.metrics.SdkMeterProvider;
 import io.opentelemetry.sdk.trace.SpanProcessor;
 import jetbrains.buildServer.serverSide.BuildPromotion;
 import jetbrains.buildServer.serverSide.ProjectManager;
@@ -43,13 +44,14 @@ public class HelperPerBuildOTELHelperFactory implements OTELHelperFactory {
                 var params = feature.getParameters();
                 if (params.get(PROPERTY_KEY_ENABLED).equals("true")) {
                     var endpoint = params.get(PROPERTY_KEY_ENDPOINT);
-                    SpanProcessor spanProcessor;
 
                     var otelHandler = otelEndpointFactory.getOTELEndpointHandler(params.get(PROPERTY_KEY_SERVICE));
                     var spanProcessorMeterProviderPair = otelHandler.buildSpanProcessorAndMeterProvider(buildPromotion, endpoint, params);
 
                     long startTime = System.nanoTime();
-                    var otelHelper = new OTELHelperImpl(spanProcessorMeterProviderPair.getLeft(), spanProcessorMeterProviderPair.getRight(), String.valueOf(buildId));
+                    var spanProcessor = spanProcessorMeterProviderPair.getLeft();
+                    var meterProvider = spanProcessorMeterProviderPair.getRight();
+                    var otelHelper = new OTELHelperImpl(spanProcessor, meterProvider, String.valueOf(buildId));
                     long endTime = System.nanoTime();
 
                     long duration = (endTime - startTime);

@@ -23,7 +23,7 @@ public class BuildStorageManagerImpl implements BuildStorageManager {
         File artifactsDir = build.getArtifactsDirectory();
         File pluginFile = new File(artifactsDir, jetbrains.buildServer.ArtifactsConstants.TEAMCITY_ARTIFACTS_DIR + File.separatorChar + OTEL_TRACE_ID_FILENAME);
 
-        LOG.debug(String.format("Reading trace id or build %d.", build.getBuildId()));
+        LOG.debug(String.format("Reading trace id for build %d.", build.getBuildId()));
 
         if (!pluginFile.exists()) {
             LOG.info(String.format("Unable to find build artifact %s for build %d.", OTEL_TRACE_ID_FILENAME, build.getBuildId()));

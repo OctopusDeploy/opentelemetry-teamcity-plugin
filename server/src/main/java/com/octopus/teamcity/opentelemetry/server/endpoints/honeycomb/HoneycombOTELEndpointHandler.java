@@ -15,6 +15,7 @@ import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.semconv.ServiceAttributes;
 import jetbrains.buildServer.serverSide.BuildPromotion;
 import jetbrains.buildServer.serverSide.SBuild;
+import jetbrains.buildServer.serverSide.TeamCityNodes;
 import jetbrains.buildServer.serverSide.crypt.EncryptUtil;
 import jetbrains.buildServer.serverSide.crypt.RSACipher;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
@@ -33,10 +34,12 @@ import static com.octopus.teamcity.opentelemetry.common.PluginConstants.*;
 public class HoneycombOTELEndpointHandler implements IOTELEndpointHandler {
 
     private final PluginDescriptor pluginDescriptor;
+    private final TeamCityNodes nodesService;
     static Logger LOG = Logger.getLogger(HoneycombOTELEndpointHandler.class.getName());
 
-    public HoneycombOTELEndpointHandler(PluginDescriptor pluginDescriptor) {
+    public HoneycombOTELEndpointHandler(PluginDescriptor pluginDescriptor, TeamCityNodes nodesService) {
         this.pluginDescriptor = pluginDescriptor;
+        this.nodesService = nodesService;
     }
 
     @NotNull
@@ -93,7 +96,8 @@ public class HoneycombOTELEndpointHandler implements IOTELEndpointHandler {
         var serviceNameResource = Resource
                 .create(Attributes.of(
                         ServiceAttributes.SERVICE_NAME, PluginConstants.SERVICE_NAME,
-                        AttributeKey.stringKey("teamcity.build_promotion.id"), Long.toString(buildPromotion.getId())
+                        AttributeKey.stringKey("teamcity.build_promotion.id"), Long.toString(buildPromotion.getId()),
+                        AttributeKey.stringKey("teamcity.node.id"), nodesService.getCurrentNode().getId()
                 ));
 
         var meterProvider = OTELMetrics.getOTELMeterProvider(metricsExporter, serviceNameResource);

@@ -79,9 +79,6 @@ public class CustomOTELEndpointHandler implements IOTELEndpointHandler {
         spanExporterBuilder.setEndpoint(exporterEndpoint);
         SpanExporter spanExporter = spanExporterBuilder.build();
 
-        LOG.debug("OTEL_PLUGIN: Opentelemetry export headers: " + LogMasker.mask(headers.toString()));
-        LOG.debug("OTEL_PLUGIN: Opentelemetry export endpoint: " + exporterEndpoint);
-
         return BatchSpanProcessor.builder(spanExporter)
                 .setMaxQueueSize(BATCH_SPAN_PROCESSOR_MAX_QUEUE_SIZE)
                 .setScheduleDelay(BATCH_SPAN_PROCESSOR_MAX_SCHEDULE_DELAY)

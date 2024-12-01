@@ -83,7 +83,7 @@ public class BuildOverviewExtensionController extends BaseController
                 if (build == null) //if it's queued, we won't get it
                     return getEmptyState();
 
-                final SProject project = projectManager.findProje   ctByExternalId(build.getProjectExternalId());
+                final SProject project = projectManager.findProjectByExternalId(build.getProjectExternalId());
 
                 var features = project.getAvailableFeaturesOfType(PLUGIN_NAME);
                 if (!features.isEmpty()) {

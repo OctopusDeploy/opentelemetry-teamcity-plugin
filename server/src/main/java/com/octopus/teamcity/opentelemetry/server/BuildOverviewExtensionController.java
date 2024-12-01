@@ -74,7 +74,7 @@ public class BuildOverviewExtensionController extends BaseController
 
         Long buildId = WebUtil.sakuraUIOpened(request)
             ? PluginUIContext.getFromRequest(request).getBuildId()
-            : Long.valueOf(Long.parseLong(request.getParameter("buildId")));
+            : Long.parseLong(request.getParameter("buildId"));
 
         if (buildId != null) {
             try (var ignored1 = CloseableThreadContext.put("teamcity.build.id", String.valueOf(buildId))) {

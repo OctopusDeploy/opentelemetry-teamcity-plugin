@@ -8,6 +8,7 @@ import jetbrains.buildServer.serverSide.SBuildServer;
 import jetbrains.buildServer.serverSide.SProject;
 import jetbrains.buildServer.web.openapi.*;
 import jetbrains.buildServer.web.util.WebUtil;
+import org.apache.logging.log4j.CloseableThreadContext;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.web.servlet.ModelAndView;
@@ -76,26 +77,29 @@ public class BuildOverviewExtensionController extends BaseController
             : Long.parseLong(request.getParameter("buildId"));
 
         if (buildId != null) {
-            final SBuild build = sBuildServer.findBuildInstanceById(buildId);
-            if (build == null) //if it's queued, we won't get it
-                return getEmptyState();
+            try (var ignored1 = CloseableThreadContext.put("teamcity.build.id", String.valueOf(buildId))) {
 
-            final SProject project = projectManager.findProjectByExternalId(build.getProjectExternalId());
-
-            var features = project.getAvailableFeaturesOfType(PLUGIN_NAME);
-            if (!features.isEmpty()) {
-                var feature = features.stream().findFirst().get();
-                var params = feature.getParameters();
-
-                if (!params.get(PROPERTY_KEY_ENABLED).equals("true"))
+                final SBuild build = sBuildServer.findBuildInstanceById(buildId);
+                if (build == null) //if it's queued, we won't get it
                     return getEmptyState();
 
-                var traceId = buildStorageManager.getTraceId(build);
-                if (traceId == null)
-                    return getEmptyState();
+                final SProject project = projectManager.findProjectByExternalId(build.getProjectExternalId());
 
-                var service = otelEndpointFactory.getOTELEndpointHandler(params.get(PROPERTY_KEY_SERVICE));
-                return service.getBuildOverviewModelAndView(build, params, traceId);
+                var features = project.getAvailableFeaturesOfType(PLUGIN_NAME);
+                if (!features.isEmpty()) {
+                    var feature = features.stream().findFirst().get();
+                    var params = feature.getParameters();
+
+                    if (!params.get(PROPERTY_KEY_ENABLED).equals("true"))
+                        return getEmptyState();
+
+                    var traceId = buildStorageManager.getTraceId(build);
+                    if (traceId == null)
+                        return getEmptyState();
+
+                    var service = otelEndpointFactory.getOTELEndpointHandler(params.get(PROPERTY_KEY_SERVICE));
+                    return service.getBuildOverviewModelAndView(build, params, traceId);
+                }
             }
         }
 

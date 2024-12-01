@@ -13,6 +13,7 @@ import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.semconv.ServiceAttributes;
+import jetbrains.buildServer.serverSide.BuildPromotion;
 import jetbrains.buildServer.serverSide.SBuild;
 import jetbrains.buildServer.serverSide.TeamCityNodes;
 import jetbrains.buildServer.serverSide.crypt.EncryptUtil;
@@ -24,7 +25,6 @@ import org.springframework.web.servlet.ModelAndView;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
-import java.time.Duration;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -63,7 +63,7 @@ public class HoneycombOTELEndpointHandler implements IOTELEndpointHandler {
     }
 
     @Override
-    public SpanProcessor buildSpanProcessor(String endpoint, Map<String, String> params) {
+    public SpanProcessor buildSpanProcessor(BuildPromotion buildPromotion, String endpoint, Map<String, String> params) {
         Map<String, String> headers = new HashMap<>();
         //todo: add a setting to say "use classic" or "use environments"
         headers.put("x-honeycomb-dataset", params.get(PROPERTY_KEY_HONEYCOMB_DATASET));
@@ -71,7 +71,7 @@ public class HoneycombOTELEndpointHandler implements IOTELEndpointHandler {
 
         var metricsExporter = buildMetricsExporter(endpoint, params);
 
-        return buildGrpcSpanProcessor(headers, endpoint, metricsExporter);
+        return buildGrpcSpanProcessor(buildPromotion, headers, endpoint, metricsExporter);
     }
 
     @Nullable
@@ -86,12 +86,17 @@ public class HoneycombOTELEndpointHandler implements IOTELEndpointHandler {
         return null;
     }
 
-    private SpanProcessor buildGrpcSpanProcessor(Map<String, String> headers, String exporterEndpoint, @Nullable MetricExporter metricsExporter) {
+    private SpanProcessor buildGrpcSpanProcessor(
+            BuildPromotion buildPromotion,
+            Map<String, String> headers,
+            String exporterEndpoint,
+            @Nullable MetricExporter metricsExporter) {
 
         //todo: centralise the definition of this
         var serviceNameResource = Resource
                 .create(Attributes.of(
                         ServiceAttributes.SERVICE_NAME, PluginConstants.SERVICE_NAME,
+                        AttributeKey.stringKey("teamcity.build_promotion.id"), Long.toString(buildPromotion.getId()),
                         AttributeKey.stringKey("teamcity.node.id"), nodesService.getCurrentNode().getId()
                 ));
 

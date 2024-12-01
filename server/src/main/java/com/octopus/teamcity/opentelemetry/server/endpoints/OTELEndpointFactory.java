@@ -3,6 +3,7 @@ package com.octopus.teamcity.opentelemetry.server.endpoints;
 import com.octopus.teamcity.opentelemetry.server.endpoints.custom.CustomOTELEndpointHandler;
 import com.octopus.teamcity.opentelemetry.server.endpoints.honeycomb.HoneycombOTELEndpointHandler;
 import com.octopus.teamcity.opentelemetry.server.endpoints.zipkin.ZipkinOTELEndpointHandler;
+import jetbrains.buildServer.serverSide.TeamCityNodes;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
 import org.jetbrains.annotations.NotNull;
 
@@ -10,11 +11,15 @@ public class OTELEndpointFactory {
 
     @NotNull
     private final PluginDescriptor pluginDescriptor;
+    @NotNull
+    private final TeamCityNodes teamcityNodesService;
 
     public OTELEndpointFactory(
-        @NotNull PluginDescriptor pluginDescriptor)
+            @NotNull PluginDescriptor pluginDescriptor,
+            @NotNull TeamCityNodes teamcityNodesService)
     {
         this.pluginDescriptor = pluginDescriptor;
+        this.teamcityNodesService = teamcityNodesService;
     }
 
     public IOTELEndpointHandler getOTELEndpointHandler(String otelService)
@@ -28,7 +33,7 @@ public class OTELEndpointFactory {
         switch (otelService)
         {
             case HONEYCOMB:
-                return new HoneycombOTELEndpointHandler(pluginDescriptor);
+                return new HoneycombOTELEndpointHandler(pluginDescriptor, teamcityNodesService);
             case ZIPKIN:
                 return new ZipkinOTELEndpointHandler(pluginDescriptor);
             case CUSTOM:

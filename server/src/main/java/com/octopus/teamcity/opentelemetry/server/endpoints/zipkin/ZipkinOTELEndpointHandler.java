@@ -18,10 +18,10 @@ import java.util.Map;
 
 import static com.octopus.teamcity.opentelemetry.common.PluginConstants.*;
 
-public class ZipKinOTELEndpointHandler implements IOTELEndpointHandler {
+public class ZipkinOTELEndpointHandler implements IOTELEndpointHandler {
     private final PluginDescriptor pluginDescriptor;
 
-    public ZipKinOTELEndpointHandler(
+    public ZipkinOTELEndpointHandler(
             PluginDescriptor pluginDescriptor) {
         this.pluginDescriptor = pluginDescriptor;
     }

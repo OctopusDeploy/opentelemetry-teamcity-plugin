@@ -3,11 +3,13 @@ package com.octopus.teamcity.opentelemetry.server.endpoints.zipkin;
 import com.octopus.teamcity.opentelemetry.server.SetProjectConfigurationSettingsRequest;
 import com.octopus.teamcity.opentelemetry.server.endpoints.IOTELEndpointHandler;
 import io.opentelemetry.exporter.zipkin.ZipkinSpanExporter;
+import io.opentelemetry.sdk.metrics.SdkMeterProvider;
 import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import jetbrains.buildServer.serverSide.BuildPromotion;
 import jetbrains.buildServer.serverSide.SBuild;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
+import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.web.servlet.ModelAndView;
 
@@ -35,8 +37,8 @@ public class ZipkinOTELEndpointHandler implements IOTELEndpointHandler {
     }
 
     @Override
-    public SpanProcessor buildSpanProcessor(BuildPromotion buildPromotion, String endpoint, Map<String, String> params) {
-        return buildZipkinSpanProcessor(endpoint);
+    public Pair<SpanProcessor, SdkMeterProvider> buildSpanProcessorAndMeterProvider(BuildPromotion buildPromotion, String endpoint, Map<String, String> params) {
+        return Pair.of(buildZipkinSpanProcessor(endpoint), null);
     }
 
     private SpanProcessor buildZipkinSpanProcessor(String exporterEndpoint) {

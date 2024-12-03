@@ -9,6 +9,7 @@ import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.propagation.ContextPropagators;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.sdk.metrics.SdkMeterProvider;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.SpanProcessor;
@@ -26,8 +27,14 @@ public class OTELHelperImpl implements OTELHelper {
     private final ConcurrentHashMap<String, Span> spanMap;
     private final SdkTracerProvider sdkTracerProvider;
     private final String helperName;
+    @Nullable
+    private final SdkMeterProvider meterProvider;
 
-    public OTELHelperImpl(SpanProcessor spanProcessor, String helperName) {
+    public OTELHelperImpl(
+            SpanProcessor spanProcessor,
+            @Nullable
+            SdkMeterProvider meterProvider,
+            String helperName) {
         this.helperName = helperName;
         Resource serviceNameResource = Resource
                 .create(Attributes.of(ServiceAttributes.SERVICE_NAME, PluginConstants.SERVICE_NAME));
@@ -41,6 +48,7 @@ public class OTELHelperImpl implements OTELHelper {
                 .build();
         this.tracer = this.openTelemetry.getTracer(PluginConstants.TRACER_INSTRUMENTATION_NAME);
         this.spanMap = new ConcurrentHashMap<>();
+        this.meterProvider = meterProvider;
     }
 
     @Override
@@ -92,6 +100,8 @@ public class OTELHelperImpl implements OTELHelper {
 
         this.sdkTracerProvider.forceFlush();
         this.sdkTracerProvider.close();
+        if (this.meterProvider != null)
+            this.meterProvider.close();
         this.spanMap.clear();
     }
 }

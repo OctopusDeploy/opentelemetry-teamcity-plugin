@@ -16,9 +16,9 @@ dependencies {
     implementation project(':common')
     implementation platform("io.opentelemetry:opentelemetry-bom:1.44.1")
     implementation('io.opentelemetry:opentelemetry-api:1.44.1')
-    implementation('io.opentelemetry:opentelemetry-sdk:1.44.1')
+    implementation('io.opentelemetry:opentelemetry-sdk:1.45.0')
     implementation('io.opentelemetry:opentelemetry-exporter-otlp:1.44.1')
-    implementation 'io.opentelemetry:opentelemetry-sdk-metrics:1.44.1'
+    implementation 'io.opentelemetry:opentelemetry-sdk-metrics:1.45.0'
     implementation('io.opentelemetry.semconv:opentelemetry-semconv')
     implementation("io.opentelemetry.semconv:opentelemetry-semconv-incubating:1.28.0-alpha")
     implementation('io.opentelemetry:opentelemetry-exporter-zipkin')

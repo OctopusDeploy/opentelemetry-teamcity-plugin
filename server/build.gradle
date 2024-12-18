@@ -29,7 +29,7 @@ dependencies {
     testImplementation 'org.apache.commons:commons-text:1.13.0'
     testImplementation 'org.mockito:mockito-junit-jupiter:5.14.2'
     testImplementation 'org.mockito:mockito-core:5.14.2'
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.3'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
 
     //provided by the environment, so we dont need to package it.
     provided 'org.jetbrains.teamcity:server-api:2024.12'
